@@ -26,8 +26,7 @@ do
 done
 
 
-step2()
-(
+printf '%s' "$stacks" |  {
 	IFS=' '
 	while read -r s1 s2 s3 s4 s5 s6 s7 s8 s9
 	do
@@ -42,10 +41,10 @@ step2()
 		[ "$s9" = '_' ] || stack9="$stack9$s9"
 	done
 
-	step3()
-	(
+	printf '%s' "$moves" | {
 		while read -r cnt from to
 		do
+			fromStack=
 			eval "fromStack=\$stack$from"
 			swap=$( printf '%s' "$fromStack" | cut -c "1-$cnt" )
 			rest=$( printf '%s' "$fromStack" | cut -c "$(( cnt + 1))-" )
@@ -64,7 +63,5 @@ step2()
 		result="$result$( printf '%s' "$stack8" | cut -c 1-1 )"
 		result="$result$( printf '%s' "$stack9" | cut -c 1-1 )"
 		echo "$result"
-	)
-	printf '%s' "$moves" | step3
-)
-printf '%s' "$stacks" | step2
+	}
+}
