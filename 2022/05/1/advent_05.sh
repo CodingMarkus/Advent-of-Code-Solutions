@@ -9,7 +9,7 @@ stacks=
 moves=
 
 newline=$( printf '\n_' )
-newline=${newline%_}
+readonly newline="${newline%_}"
 
 IFS=''
 while read -r line
