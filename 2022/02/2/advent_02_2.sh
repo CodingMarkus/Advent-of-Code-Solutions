@@ -52,8 +52,9 @@ do
 	for choice in $line
 	do
 		case $choice in
-			A|B|C) decode "$choice" ; other=$?;;
-			X|Y|Z) getMatchScore "$choice" "$other"; score=$(( score + $? ));;
+			A|B|C) decode "$choice" || other=$?;;
+			X|Y|Z) getMatchScore "$choice" "$other" \
+				|| score=$(( score + $? ));;
 			*) echo "Error"; exit 1;;
 		esac
 	done

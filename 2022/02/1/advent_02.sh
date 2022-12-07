@@ -42,15 +42,14 @@ do
 	other=0
 	for choice in $line
 	do
-		decode "$choice"
-		case $choice in
-			A|B|C) other=$?;;
-			X|Y|Z) me=$?; score=$(( score + me ));;
-			*) echo "Error"; exit 1;;
-		esac
+		decode "$choice" \
+			|| case $choice in
+				A|B|C) other=$?;;
+				X|Y|Z) me=$?; score=$(( score + me ));;
+				*) echo "Error"; exit 1;;
+			esac
 	done
-	getMatchScore "$me" "$other"
-	score=$(( score + $? ))
+	getMatchScore "$me" "$other" || score=$(( score + $? ))
 done
 
 echo "Score: $score"
