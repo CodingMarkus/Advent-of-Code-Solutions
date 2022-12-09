@@ -31,88 +31,82 @@ done
 rows=$y
 
 
-getHeight()
-{
-	res=0
-	eval "res=\$trees_${2}_${1}"
-	printf '%s' "$res"
-}
-
+res=0
+highestScore=0
 lastCol=$(( cols - 1 ))
 lastRow=$(( rows - 1 ))
 
-getScore()
-{
-	xtree=$1
-	ytree=$2
-	finalScore=0
-	height=$( getHeight "$xtree" "$ytree" )
-
-	# Left
-	cnt=1
-	xtest=$(( xtree - 1 ))
-	ytest=$ytree
-	while [ $xtest -gt 0 ]
-	do
-		[ "$( getHeight "$xtest" "$ytest" )" -lt "$height" ] || break
-		cnt=$(( cnt + 1 ))
-		xtest=$(( xtest - 1 ))
-	done
-	finalScore=$cnt
-
-	# Right
-	cnt=1
-	xtest=$(( xtree + 1 ))
-	ytest=$ytree
-	while [ $xtest -lt $lastCol ]
-	do
-		[ "$( getHeight "$xtest" "$ytest" )" -lt "$height" ] || break
-		cnt=$(( cnt + 1 ))
-		xtest=$(( xtest + 1 ))
-	done
-	finalScore=$(( finalScore * cnt ))
-
-	# Top
-	cnt=1
-	xtest=$xtree
-	ytest=$(( ytree - 1 ))
-	while [ $ytest -gt 0 ]
-	do
-		[ "$( getHeight "$xtest" "$ytest" )" -lt "$height" ] || break
-		cnt=$(( cnt + 1 ))
-		ytest=$(( ytest - 1 ))
-	done
-	finalScore=$(( finalScore * cnt ))
-
-	# Bottom
-	cnt=1
-	xtest=$xtree
-	ytest=$(( ytree + 1 ))
-	while [ $ytest -lt $lastRow ]
-	do
-		[ "$( getHeight "$xtest" "$ytest" )" -lt "$height" ] || break
-		cnt=$(( cnt + 1 ))
-		ytest=$(( ytest + 1 ))
-	done
-	finalScore=$(( finalScore * cnt ))
-
-	printf '%s' $finalScore
-}
-
-
-score=0
-
 y=1
-while [ $y -lt $lastCol ]
+while [ $y -lt $lastRow ]
 do
 	x=1
-	while [ $x -lt $lastRow ]
+	while [ $x -lt $lastCol ]
 	do
-		s=$( getScore $x $y )
-		[ "$s" -gt $score ] && score=$s
+		score=0
+
+		xtree=$x
+		ytree=$y
+		height=0
+
+		eval "height=\$trees_${ytree}_${xtree}"
+
+		# Left
+		cnt=1
+		xtest=$(( xtree - 1 ))
+		ytest=$ytree
+		while [ $xtest -gt 0 ]
+		do
+			eval "res=\$trees_${ytest}_${xtest}"
+			[ $res -lt "$height" ] || break
+			cnt=$(( cnt + 1 ))
+			xtest=$(( xtest - 1 ))
+		done
+		score=$cnt
+
+		# Right
+		cnt=1
+		xtest=$(( xtree + 1 ))
+		ytest=$ytree
+		while [ $xtest -lt $lastCol ]
+		do
+			eval "res=\$trees_${ytest}_${xtest}"
+			[ $res -lt "$height" ] || break
+			cnt=$(( cnt + 1 ))
+			xtest=$(( xtest + 1 ))
+		done
+		score=$(( score * cnt ))
+
+		# Top
+		cnt=1
+		xtest=$xtree
+		ytest=$(( ytree - 1 ))
+		while [ $ytest -gt 0 ]
+		do
+			eval "res=\$trees_${ytest}_${xtest}"
+			[ $res -lt "$height" ] || break
+			cnt=$(( cnt + 1 ))
+			ytest=$(( ytest - 1 ))
+		done
+		score=$(( score * cnt ))
+
+		# Bottom
+		cnt=1
+		xtest=$xtree
+		ytest=$(( ytree + 1 ))
+		while [ $ytest -lt $lastRow ]
+		do
+			eval "res=\$trees_${ytest}_${xtest}"
+			[ $res -lt "$height" ] || break
+			cnt=$(( cnt + 1 ))
+			ytest=$(( ytest + 1 ))
+		done
+		score=$(( score * cnt ))
+
+		# s=$( getScore $x $y )
+		[ $score -gt $highestScore ] && highestScore=$score
 		x=$(( x + 1 ))
 	done
 	y=$(( y + 1 ))
 done
 
-echo "Highest score: $score"
+echo "Highest score: $highestScore"
