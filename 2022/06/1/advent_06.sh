@@ -5,17 +5,6 @@
 
 set -e
 
-char1=$( dd bs=1 count=1 2>/dev/null )
-char2=$( dd bs=1 count=1 2>/dev/null )
-char3=$( dd bs=1 count=1 2>/dev/null )
-char4=$( dd bs=1 count=1 2>/dev/null )
-
-[ -n "$char1" ] || { echo "Error c1"; exit 1; }
-[ -n "$char2" ] || { echo "Error c2"; exit 1; }
-[ -n "$char3" ] || { echo "Error c3"; exit 1; }
-[ -n "$char4" ] || { echo "Error c4"; exit 1; }
-
-
 readonly true=0
 readonly false=1
 
@@ -26,22 +15,38 @@ hasDupes()
 	return $true
 }
 
+read -r line || true
 
-count=4
-while true
+count=0
+for char in $( printf '%s' "$line" | sed 's/\(.\)/\1 /g' )
 do
-	if ! hasDupes "$char1" "$char2" "$char3" "$char4"
+	if [ -z "$char1" ]
 	then
-		echo "Count: $count"
-		exit 0
+		char1=$char
+	elif [ -z "$char2" ]
+	then
+		char2=$char
+	elif [ -z "$char3" ]
+	then
+		char3=$char
+	elif [ -z "$char4" ]
+	then
+		count=4
+		char4=$char
+	else
+		char1=$char2
+		char2=$char3
+		char3=$char4
+		char4=$char
+		count=$(( count + 1 ))
 	fi
 
-	count=$(( count + 1 ))
-	newChar=$( dd bs=1 count=1 2>/dev/null )
-	[ -n "$newChar" ] || exit
-
-	char1=$char2
-	char2=$char3
-	char3=$char4
-	char4=$newChar
+	if [ $count -ge 4 ]
+	then
+		if ! hasDupes "$char1" "$char2" "$char3" "$char4"
+		then
+			echo "Count: $count"
+			exit 0
+		fi
+	fi
 done

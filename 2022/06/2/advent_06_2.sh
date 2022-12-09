@@ -21,7 +21,9 @@ hasDupes()
 
 
 count=14
-while true
+read -r line || true
+
+for char in $( printf '%s' "$line" | sed 's/\(.\)/\1 /g' )
 do
 	if ! hasDupes "$seq"
 	then
@@ -30,9 +32,9 @@ do
 	fi
 
 	count=$(( count + 1 ))
-	newChar=$( dd bs=1 count=1 2>/dev/null )
-	[ -n "$newChar" ] || exit
-
 	seq=$( printf '%s' "$seq" | cut -c 2- )
-	seq="$seq$newChar"
+	seq="$seq$char"
 done
+
+echo "Not found"
+exit 1
