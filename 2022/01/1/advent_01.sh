@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # Run as:
-# cat advent_01_input.txt | sh advent_01.sh
+# cat advent_01_sample.txt | sh advent_01.sh
+# cat advent_01_input.txt  | sh advent_01.sh
 
 set -e
 
@@ -20,4 +21,4 @@ do
 done
 
 [ $current -gt $highest ] && highest=current
-echo $highest
+echo "Answer: $highest"

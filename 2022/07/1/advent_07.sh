@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # Run as:
-# cat advent_07_input.txt | sh advent_07.sh
+# cat advent_07_sample.txt | sh advent_07.sh
+# cat advent_07_input.txt  | sh advent_07.sh
 
 set -e
 

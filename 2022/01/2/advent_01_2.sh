@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # Run as:
-# cat advent_01_2_input.txt | sh advent_01_2.sh
+# cat advent_01_2_sample.txt | sh advent_01_2.sh
+# cat advent_01_2_input.txt  | sh advent_01_2.sh
 
 set -e
 
@@ -28,4 +29,4 @@ do
 	total=$(( total + top3 ))
 done
 
-echo $total
+echo "Answer: $total"

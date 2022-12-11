@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # Run as:
-# cat advent_05_input.txt | sh advent_05.sh
+# cat advent_05_sample.txt | sh advent_05.sh
+# cat advent_05_input.txt  | sh advent_05.sh
 
 set -e
 
@@ -51,7 +52,7 @@ printf '%s' "$stacks" | {
 				eval "fromStack=\$stack$from"
 				swap=$( printf '%s' "$fromStack" | cut -c 1-1 )
 				rest=$( printf '%s' "$fromStack" | cut -c 2- )
-				[ -n "$swap" ] || echo Error
+				[ -n "$swap" ] || { echo "Error: empty swap"; exit 1; }
 				eval "stack$to=\"\$swap\$stack$to\""
 				eval "stack$from=\$rest"
 				cnt=$(( cnt - 1 ))
@@ -67,6 +68,7 @@ printf '%s' "$stacks" | {
 		result="$result$( printf '%s' "$stack7" | cut -c 1-1 )"
 		result="$result$( printf '%s' "$stack8" | cut -c 1-1 )"
 		result="$result$( printf '%s' "$stack9" | cut -c 1-1 )"
-		echo "$result"
+
+		echo "Answer: $result"
 	}
 }
