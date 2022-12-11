@@ -86,6 +86,4 @@ do
 	done
 done
 
-positions=$( set | grep visited_ | tr ';' '\n' | sort | uniq | wc -l )
-positions=$(( positions + 0 ))
-echo "Positions visited: $positions"
+echo "Positions visited: $( set | grep -c visited_ )"
