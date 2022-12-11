@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Solution to https://adventofcode.com/2022/day/9
+
 # Run as:
 # cat advent_09_2_sample.txt | sh advent_09_2.sh
 # cat advent_09_2_input.txt  | sh advent_09_2.sh
