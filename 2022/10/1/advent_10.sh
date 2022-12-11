@@ -7,24 +7,24 @@
 set -e
 
 x=1
-pc=1
+cycles=1
 signal=0
 while read -r instruction value
 do
 	case $instruction in
-		noop) cycles=1;;
-		addx) cycles=2;;
+		noop) delay=1;;
+		addx) delay=2;;
 		*) echo "Error: Bad instructions"; exit 1;;
 	esac
 
-	while [ $cycles -gt 0 ]
+	while [ $delay -gt 0 ]
 	do
-		if [ $(( (pc - 20) % 40 )) -eq 0 ]
+		if [ $(( (cycles - 20) % 40 )) -eq 0 ]
 		then
-			signal=$(( signal + ( pc * x ) ))
+			signal=$(( signal + ( cycles * x ) ))
 		fi
-		pc=$(( pc + 1 ))
-		cycles=$(( cycles - 1 ))
+		cycles=$(( cycles + 1 ))
+		delay=$(( delay - 1 ))
 	done
 
 	if [ "$instruction" = "addx" ]
