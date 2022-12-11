@@ -16,7 +16,8 @@ while read -r line
 do
 	if printf '%s' "$line" | grep -q '\['
 	then
-		line=$( printf '%s' "$line" | tr -d '[]' | sed 's/    / _/g' )
+		line=$( printf '%s' "$line" \
+			| sed "s/^   /[_]/g" | sed "s/    / [_]/g" | tr -d '[]' )
 		stacks="$stacks$line$newline"
 	elif printf '%s' "$line" | grep -q '^move'
 	then
