@@ -5,24 +5,33 @@ syntaxError()
 	echo "
 Syntax:
 
-	run.sh <day> <part>
+	run.sh <day> <part> [sample]
 
 E.g.:
 
-	run.sh 12 1
+	run.sh 12 1 [sample]
 
 Day must be 1 to 25, part must be either 1 or 2.
+
+If part is followed by the optional parameter \"sample\",
+then only the sample calculation is peformed.
 " >&2
 	exit 1
 }
 
-if [ $# -ne 2 ]
+if [ $# -ne 2 ] && [ $# -ne 3 ]
+then
+	syntaxError
+fi
+
+if [ $# -eq 3 ] && [ "$3" != "sample" ]
 then
 	syntaxError
 fi
 
 day=$1
 part=$2
+sample=$3
 
 if [ "$day" -lt 1 ] || [ "$day" -gt 25 ]
 then
@@ -52,7 +61,10 @@ echo
 echo "Calculated:"
 echo
 sh "advent_$day${part}.sh" < "advent_$day${part}_sample.txt"
-sh "advent_$day${part}.sh" < "advent_$day${part}_input.txt"
+if [ -z "$sample" ]
+then
+	sh "advent_$day${part}.sh" < "advent_$day${part}_input.txt"
+fi
 echo
 echo "Expected:"
 echo
