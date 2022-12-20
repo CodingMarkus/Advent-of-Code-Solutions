@@ -107,7 +107,7 @@ produceSand()
 
 				newX=$(( grainX - 1 ))
 				eval "loc=\$map_${newX}_${newY}"
-				if [ ${#loc} -eq 0 ]f
+				if [ ${#loc} -eq 0 ]
 				then
 					backtraceStackCount=$(( backtraceStackCount + 1 ))
 					eval "backtraceStack_${backtraceStackCount}=\$grainX"
