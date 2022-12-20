@@ -125,11 +125,7 @@ sortStack=
 
 popStack()
 {
-	if [ -z "$sortStack" ]
-	then
-		eval "$1="
-		return
-	fi
+	[ ${#sortStack} -eq 0 ] &&  { eval "$1="; return; }
 
 	newSortStack=${sortStack% *}
 	# shellcheck disable=SC2034 # Used in eval

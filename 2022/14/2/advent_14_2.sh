@@ -46,7 +46,7 @@ mapFromTo()
 	done
 }
 
-floor=0
+lowest=0
 
 IFS=' ->'
 while read -r line
@@ -58,79 +58,83 @@ do
 		y=${coords#"$x",}
 		[ -z "$xpos" ] && { xpos=$x; ypos=$y; continue; }
 		mapFromTo "$xpos" "$ypos" "$x" "$y"
-		[ "$y" -gt "$floor" ] && floor="$y"
+		[ "$y" -gt "$lowest" ] && lowest="$y"
 		xpos=$x
 		ypos=$y
 	done
 	xpos=
 	ypos=
 done
-floor=$(( 2 + floor ))
-lastRow=$(( floor - 1 ))
+lastRow=$(( lowest + 1 ))
 
 
-count=0
 readonly true=0
+count=0
 
 produceSand()
 {
-	[ -z "$map_500_0" ] || return $true
-	grainX=500
-	grainY=0
+	backtraceStackCount=2
+	# shellcheck disable=SC2034 # Used by eval below
+	backtraceStack_1=500
+	# shellcheck disable=SC2034 # Used by eval below
+	backtraceStack_2=0
 
 	while true
 	do
-		if [ $grainY -eq $lastRow ]
-		then
-			count=$(( count + 1 ))
-			eval "map_${grainX}_${grainY}=o"
+		[ $backtraceStackCount -eq 0 ] && return $true
 
-			if [ $grainX -eq 500 ] && [ $grainY -eq 0 ]
+		eval "grainY=\$backtraceStack_${backtraceStackCount}"
+		backtraceStackCount=$(( backtraceStackCount - 1 ))
+		eval "grainX=\$backtraceStack_${backtraceStackCount}"
+		backtraceStackCount=$(( backtraceStackCount - 1 ))
+
+		while true
+		do
+			if [ "$grainY" -lt $lastRow ]
 			then
-				return $true
+				newY=$(( grainY + 1 ))
+				eval "loc=\$map_${grainX}_${newY}"
+				# shellcheck disable=SC2154 # Assigned in eval above
+				if [ ${#loc} -eq 0 ]
+				then
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainX"
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainY"
+					grainY=$newY
+					continue
+				fi
+
+				newX=$(( grainX - 1 ))
+				eval "loc=\$map_${newX}_${newY}"
+				if [ ${#loc} -eq 0 ]f
+				then
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainX"
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainY"
+					grainX=$newX
+					grainY=$newY
+					continue
+				fi
+
+				newX=$(( grainX + 1 ))
+				eval "loc=\$map_${newX}_${newY}"
+				if [ ${#loc} -eq 0 ]
+				then
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainX"
+					backtraceStackCount=$(( backtraceStackCount + 1 ))
+					eval "backtraceStack_${backtraceStackCount}=\$grainY"
+					grainX=$newX
+					grainY=$newY
+					continue
+				fi
 			fi
-
-			grainX=500
-			grainY=0
-			continue
-		fi
-
-		newY=$(( grainY + 1 ))
-		eval "field=\$map_${grainX}_${newY}"
-		if [ -z "$field" ]
-		then
-			grainY=$newY
-			continue
-		fi
-
-		newX=$(( grainX - 1 ))
-		eval "field=\$map_${newX}_${newY}"
-		if [ -z "$field" ]
-		then
-			grainX=$newX
-			grainY=$newY
-			continue
-		fi
-
-		newX=$(( grainX + 1 ))
-		eval "field=\$map_${newX}_${newY}"
-		if [ -z "$field" ]
-		then
-			grainX=$newX
-			grainY=$newY
-			continue
-		fi
-
-		count=$(( count + 1 ))
-		eval "map_${grainX}_${grainY}=o"
-
-		if [ $grainX -eq 500 ] && [ $grainY -eq 0 ]
-		then
-			return $true
-		fi
-
-		grainX=500
-		grainY=0
+			count=$(( count + 1 ))
+			eval "map_${grainX}_${grainY}='o'"
+			break
+		done
 	done
 }
 
