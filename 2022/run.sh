@@ -43,7 +43,7 @@ then
 	syntaxError
 fi
 
-if [ "$part" -lt 10 ] && [ ${#day} -eq 1 ]
+if [ "$day" -lt 10 ] && [ ${#day} -eq 1 ]
 then
 	day="0$day"
 fi
