@@ -112,9 +112,9 @@ printf '%s' "$coordinates" | {
 	sensorToInspect=0
 	while [ $sensorToInspect -lt $sensorCount ]
 	do
-		eval "sensorX=sensor_x_${sensorToInspect}"
-		eval "sensorY=sensor_y_${sensorToInspect}"
-		eval "radius=radius_${sensorToInspect}"
+		eval "sensorX=\$sensor_x_${sensorToInspect}"
+		eval "sensorY=\$sensor_y_${sensorToInspect}"
+		eval "radius=\$radius_${sensorToInspect}"
 
 		# shellcheck disable=SC2154 # Set by eval above
 		extendedRadius=$(( radius + 1 ))
