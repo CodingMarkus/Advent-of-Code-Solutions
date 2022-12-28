@@ -38,8 +38,6 @@ searchFieldSize=$(( searchFieldSize + 0 ))
 	|| { echo "Error: searchFieldSize missing!"; exit 1; }
 
 
-
-
 distance=0
 
 # "Manhatten Distance"
@@ -55,22 +53,30 @@ getDistance()
 }
 
 
-sensorCount=0
+lastCollSensorX=0
+lastCollSensorY=0
+lastCollSensorR=0
 
 checkCollision()
 {
 	sensorToCheck=0
 	while [ $sensorToCheck -lt $sensorCount ]
 	do
-		eval "testX=\$sensor_x_${sensorToCheck}"
-		eval "testY=\$sensor_y_${sensorToCheck}"
-		eval "testR=\$radius_${sensorToCheck}"
+		eval "testX=\$sensor2_x_${sensorToCheck}"
+		eval "testY=\$sensor2_y_${sensorToCheck}"
+		eval "testR=\$radius2_${sensorToCheck}"
 
 		# shellcheck disable=SC2154,SC2086 # Set by eval above
-		getDistance $testX $testY $1 $2
+		getDistance $1 $2 $testX $testY
 
 		# shellcheck disable=SC2154,SC2086 # Set by eval above
-		[ $distance -le $testR ] && return
+		if [ $distance -le $testR ]
+		then
+			lastCollSensorX=$testX
+			lastCollSensorY=$testY
+			lastCollSensorR=$testR
+			return
+		fi
 
 		sensorToCheck=$(( sensorToCheck + 1 ))
 	done
@@ -79,6 +85,8 @@ checkCollision()
 	exit 0
 }
 
+
+sensorCount=0
 
 printf '%s' "$coordinates" | {
 	while read -r sensorX sensorY beaconX beaconY
@@ -93,6 +101,11 @@ printf '%s' "$coordinates" | {
 		eval "sensor_x_${sensorCount}=\$sensorX"
 		eval "sensor_y_${sensorCount}=\$sensorY"
 		eval "radius_${sensorCount}=\$distance"
+
+		eval "sensor2_x_${sensorCount}=\$sensorX"
+		eval "sensor2_y_${sensorCount}=\$sensorY"
+		eval "radius2_${sensorCount}=\$distance"
+
 		sensorCount=$(( sensorCount + 1 ))
 	done
 
@@ -104,29 +117,50 @@ printf '%s' "$coordinates" | {
 		eval "radius=radius_${sensorToInspect}"
 
 		# shellcheck disable=SC2154 # Set by eval above
-		r=$(( radius + 1 ))
+		extendedRadius=$(( radius + 1 ))
 
-		row=$(( sensorY - r ))
-		[ $row -lt 0 ] && row=0
-		[ $row -gt  $searchFieldSize ] && row=$searchFieldSize
+		minRow=$(( sensorY - extendedRadius ))
+		[ $minRow -lt 0 ] && minRow=0
+		[ $minRow -gt  $searchFieldSize ] && minRow=$searchFieldSize
 
-		maxRow=$(( sensorY + r ))
+		maxRow=$(( sensorY + extendedRadius ))
 		[ $maxRow -lt 0 ] && maxRow=0
 		[ $maxRow -gt $searchFieldSize ] && maxRow=$searchFieldSize
 
+		row=$minRow
+		sensorXR=$(( sensorX - extendedRadius ))
 		while [ $row -le $maxRow ]
 		do
-			# shellcheck disable=SC2086
-			getDistance $sensorX $sensorY $sensorX $row
-			minX=$(( sensorX - (r - distance) ))
-			maxX=$(( sensorX + (r - distance) ))
+			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
+			minX=$(( sensorXR + deltaY ))
 			if [ $minX -ge 0 ] && [ $minX -le $searchFieldSize ]
 			then
-				checkCollision $minX $row
+				# shellcheck disable=SC2086 # Set by eval above
+				getDistance $minX $row $lastCollSensorX $lastCollSensorY
+				# shellcheck disable=SC2086 # Set by eval above
+				if [ $distance -gt $lastCollSensorR ]
+				then
+					checkCollision $minX $row
+				fi
 			fi
+			row=$(( row + 1 ))
+		done
+
+		row=$minRow
+		sensorXR=$(( sensorX + extendedRadius ))
+		while [ $row -le $maxRow ]
+		do
+			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
+			maxX=$(( sensorXR - deltaY ))
 			if [ $maxX -ge 0 ] && [ $maxX -le $searchFieldSize ]
 			then
-				checkCollision $maxX $row
+				# shellcheck disable=SC2086 # Set by eval above
+				getDistance $maxX $row $lastCollSensorX $lastCollSensorY
+				# shellcheck disable=SC2086 # Set by eval above
+				if [ $distance -gt $lastCollSensorR ]
+				then
+					checkCollision $maxX $row
+				fi
 			fi
 			row=$(( row + 1 ))
 		done
