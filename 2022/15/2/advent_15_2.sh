@@ -129,6 +129,7 @@ printf '%s' "$coordinates" | {
 
 		row=$minRow
 		sensorXR=$(( sensorX - extendedRadius ))
+		# shellcheck disable=SC2086
 		while [ $row -le $maxRow ]
 		do
 			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
@@ -142,27 +143,62 @@ printf '%s' "$coordinates" | {
 				then
 					checkCollision $minX $row
 				fi
+				row=$(( row + 1 ))
+			else
+				if [ "$row" -lt "$sensorY" ]
+				then
+					if [ $minX -lt 0 ]
+					then
+						row=$sensorY
+					else
+						row=$(( row + (minX -  searchFieldSize) ))
+					fi
+				else
+					if [ $minX -lt 0 ]
+					then
+						row=$(( row - minX ))
+					else
+						row=$maxRow
+					fi
+				fi
 			fi
-			row=$(( row + 1 ))
 		done
 
 		row=$minRow
 		sensorXR=$(( sensorX + extendedRadius ))
+		# shellcheck disable=SC2086
 		while [ $row -le $maxRow ]
 		do
 			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
 			maxX=$(( sensorXR - deltaY ))
 			if [ $maxX -ge 0 ] && [ $maxX -le $searchFieldSize ]
 			then
-				# shellcheck disable=SC2086 # Set by eval above
+				# shellcheck disable=SC2086
 				getDistance $maxX $row $lastCollSensorX $lastCollSensorY
-				# shellcheck disable=SC2086 # Set by eval above
+				# shellcheck disable=SC2086
 				if [ $distance -gt $lastCollSensorR ]
 				then
 					checkCollision $maxX $row
 				fi
+				row=$(( row + 1 ))
+			else
+				if [ "$row" -lt "$sensorY" ]
+				then
+					if [ $maxX -lt 0 ]
+					then
+						row=$(( row - maxX ))
+					else
+						row=$sensorY
+					fi
+				else
+					if [ $maxX -lt 0 ]
+					then
+						row=$maxRow
+					else
+						row=$(( row + (maxX -  searchFieldSize) ))
+					fi
+				fi
 			fi
-			row=$(( row + 1 ))
 		done
 
 		sensorToInspect=$(( sensorToInspect + 1 ))
