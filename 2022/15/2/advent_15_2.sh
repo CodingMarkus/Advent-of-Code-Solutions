@@ -38,51 +38,258 @@ searchFieldSize=$(( searchFieldSize + 0 ))
 	|| { echo "Error: searchFieldSize missing!"; exit 1; }
 
 
-distance=0
+
+mdistance=0
 
 # "Manhatten Distance"
 getDistance()
 {
-	# $1 = x1
-	# $2 = y1
-	# $3 = x2
-	# $4 = y2
+	# $1=x1, $2=y1, $3=x2, $4=y2
 	xdiff=$(( $1 > $3 ? $1 - $3 : $3 - $1 ))
 	ydiff=$(( $2 > $4 ? $2 - $4 : $4 - $2 ))
-	distance=$(( xdiff + ydiff ))
+	mdistance=$(( xdiff + ydiff ))
+	return 0
 }
+
 
 
 lastCollSensorX=0
 lastCollSensorY=0
 lastCollSensorR=0
 
-checkCollision()
+checkForCollision()
 {
 	sensorToCheck=0
 	while [ $sensorToCheck -lt $sensorCount ]
 	do
-		eval "testX=\$sensor2_x_${sensorToCheck}"
-		eval "testY=\$sensor2_y_${sensorToCheck}"
-		eval "testR=\$radius2_${sensorToCheck}"
+		eval "testX=\$sensor_x_${sensorToCheck}"
+		eval "testY=\$sensor_y_${sensorToCheck}"
+		eval "testR=\$radius_${sensorToCheck}"
 
 		# shellcheck disable=SC2154,SC2086 # Set by eval above
-		getDistance $1 $2 $testX $testY
+		getDistance $nextX $nextRow $testX $testY
 
 		# shellcheck disable=SC2154,SC2086 # Set by eval above
-		if [ $distance -le $testR ]
+		if [ $mdistance -le $testR ]
 		then
 			lastCollSensorX=$testX
 			lastCollSensorY=$testY
 			lastCollSensorR=$testR
-			return
+			return 0
 		fi
 
 		sensorToCheck=$(( sensorToCheck + 1 ))
 	done
 
-	echo "Tuning frequency: $(( ($1 * 4000000) + $2 ))"
+	echo "Tuning frequency: $(( (nextX * 4000000) + nextRow ))"
 	exit 0
+}
+
+
+
+lineIntersectionX=0
+lineIntersectionY=0
+
+calcLineIntersection()
+{
+	# $1=x1, $2=y1, $3=x2, $4=y2
+	# $5=x3, $6=y3, $7=x4, $8=y4
+
+	denom="(($1 - $3) * ($6 - $8)) - (($2 - $4) * ($5 - $7))"
+	denom=$( printf '%s\n' "$denom" | bc )
+	if [ "$denom" -eq 0 ]
+	then
+		lineIntersectionY=
+		return 0
+	fi
+
+	numer1="(($1 * $4) - ($2 * $3)) * ($5 - $7)"
+	numer2="($1 - $3) * (($5 * $8) - ($6 * $7))"
+	lineIntersectionX=$( printf '%s\n' "($numer1 - $numer2) / $denom" | bc )
+
+	numer1="(($1 * $4) - ($2 * $3)) * ($6 - $8)"
+	numer2="($2 - $4) * (($5 * $8) - ($6 * $7))"
+	lineIntersectionY=$( printf '%s\n' "($numer1 - $numer2) / $denom" | bc )
+
+	return 0
+}
+
+
+
+pointIsInPlane()
+{
+	# $1=x, $2=y, $3=planeX, $4=planeY, $5=planeR
+	getDistance "$1" "$2" "$3" "$4"
+	[ $mdistance -le "$5" ]
+}
+
+
+
+intersectionAtRow=0
+
+updateIntersectionAtRow()
+{
+	intsX=$lineIntersectionX
+	intsY=$lineIntersectionY
+
+	# shellcheck disable=SC2086
+	if pointIsInPlane $intsX $intsY $x1 $y1 $r1 \
+		&& pointIsInPlane $intsX $intsY $x2 $y2 $r2
+	then
+		intersectionAtRow=$intsY
+		return 0
+	fi
+
+	# Compensate for rounding errors
+	intsXMax=$(( intsX + 2 ))
+	intsYMax=$(( intsY + 2 ))
+	intsXMin=$(( intsX - 2 ))
+	intsYMin=$(( intsY - 2 ))
+
+	intsY=$intsYMax
+	while [ $intsY -ge $intsYMin ]
+	do
+		intsX=$intsXMax
+		while [ $intsX -ge $intsXMin ]
+		do
+			# shellcheck disable=SC2086
+			if pointIsInPlane $intsX $intsY $x1 $y1 $r1 \
+				&& pointIsInPlane $intsX $intsY $x2 $y2 $r2
+			then
+				intersectionAtRow=$intsY
+				return 0
+			fi
+			intsX=$(( intsX - 1 ))
+		done
+		intsY=$(( intsY - 1 ))
+	done
+	return 0
+}
+
+
+
+calcIntersection_AC()
+{
+	xa=$traverseFromX; ya=$traverseFromY
+	xb=$traverseToX; yb=$traverseToY
+	x1=$sensorX; y1=$sensorY; r1=$extendedRadius
+	x2=$lastCollSensorX ; y2=$lastCollSensorY; r2=$lastCollSensorR
+
+	intersectionAtRow=
+
+	# shellcheck disable=SC2086
+	calcLineIntersection \
+		$xa $ya $xb $yb \
+		$x2 $(( y2 - r2 )) $(( x2 - r2 )) $y2 # x - a
+	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
+	[ -n "$intersectionAtRow" ] && return 0
+
+	# shellcheck disable=SC2086
+	calcLineIntersection \
+		$xa $ya $xb $yb \
+		$(( x2 + r2 )) $y2 $x2 $(( y2 + r2 )) # x - c
+	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
+	[ -n "$intersectionAtRow" ] && return 0
+
+	# Compensate for rounding errors
+	[ -n "$intersectionAtRow" ] \
+		&& intersectionAtRow=$(( intersectionAtRow - 2 ))
+	return 0
+}
+
+
+calcIntersection_BD()
+{
+	xa=$traverseFromX; ya=$traverseFromY
+	xb=$traverseToX; yb=$traverseToY
+	x1=$sensorX; y1=$sensorY; r1=$extendedRadius
+	x2=$lastCollSensorX ; y2=$lastCollSensorY; r2=$lastCollSensorR
+
+	intersectionAtRow=
+
+	# shellcheck disable=SC2086
+	calcLineIntersection \
+		$xa $ya $xb $yb \
+		$(( x2 - r2 )) $y2 $x2 $(( y2 + r2 )) # x - b
+	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
+	[ -n "$intersectionAtRow" ] && return 0
+
+	# shellcheck disable=SC2086
+	calcLineIntersection \
+		$xa $ya $xb $yb \
+		$x2 $(( y2 - r2 )) $(( x2 + r2 )) $y2 # x - d
+	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
+	[ -n "$intersectionAtRow" ] && return 0
+
+	# Compensate for rounding errors
+	[ -n "$intersectionAtRow" ] \
+		&& intersectionAtRow=$(( intersectionAtRow - 2 ))
+	return 0
+}
+
+
+readonly true=0
+readonly false=1
+
+
+checkNextRowIsValid()
+{
+	if [ "$nextRow" -gt $searchFieldSize ]
+	then
+		nextRow=$(( traverseToY + 1 ))
+		return $false
+	fi
+	if [ "$nextRow" -lt 0 ]
+	then
+		rowsToSkip=$(( -nextRow ))
+		nextX=$(( nextX + (rowsToSkip * deltaX) ))
+		nextRow=$(( nextRow + rowsToSkip ))
+		return $false
+	fi
+	return $true
+}
+
+
+advanceNextRow()
+{
+	if [ "$lastCollSensorR" -eq 0 ]
+	then
+		checkForCollision
+		if [ $deltaX -lt 0 ]
+		then
+			calcIntersection_BD
+		else
+			calcIntersection_AC
+		fi
+
+		if [ -z "$intersectionAtRow" ]
+		then
+			nextRow=$(( traverseToY + 1 ))
+		elif [ "$intersectionAtRow" -gt "$nextRow" ]
+		then
+			rowsToSkip=$(( intersectionAtRow - nextRow ))
+			nextX=$(( nextX + (rowsToSkip * deltaX) ))
+			nextRow=$intersectionAtRow
+		else
+			nextX=$(( nextX + deltaX ))
+			nextRow=$(( nextRow + 1 ))
+		fi
+	else
+		getDistance "$nextX" "$nextRow" "$lastCollSensorX" "$lastCollSensorY"
+		if [ $mdistance -ge "$lastCollSensorR" ]
+		then
+			lastCollSensorR=0
+		else
+			# Compensate for rounding errors
+			nextRow=$(( nextRow + 1 ))
+			if [ $nextRow -gt $(( intersectionAtRow + 6 )) ]
+			then
+				nextRow=$(( traverseToY + 1 ))
+			else
+				nextX=$(( nextX + deltaX ))
+			fi
+		fi
+	fi
 }
 
 
@@ -100,11 +307,7 @@ printf '%s' "$coordinates" | {
 
 		eval "sensor_x_${sensorCount}=\$sensorX"
 		eval "sensor_y_${sensorCount}=\$sensorY"
-		eval "radius_${sensorCount}=\$distance"
-
-		eval "sensor2_x_${sensorCount}=\$sensorX"
-		eval "sensor2_y_${sensorCount}=\$sensorY"
-		eval "radius2_${sensorCount}=\$distance"
+		eval "radius_${sensorCount}=\$mdistance"
 
 		sensorCount=$(( sensorCount + 1 ))
 	done
@@ -119,86 +322,109 @@ printf '%s' "$coordinates" | {
 		# shellcheck disable=SC2154 # Set by eval above
 		extendedRadius=$(( radius + 1 ))
 
-		minRow=$(( sensorY - extendedRadius ))
-		[ $minRow -lt 0 ] && minRow=0
-		[ $minRow -gt  $searchFieldSize ] && minRow=$searchFieldSize
+		# a /\ d
+		# b \/ c
 
-		maxRow=$(( sensorY + extendedRadius ))
-		[ $maxRow -lt 0 ] && maxRow=0
-		[ $maxRow -gt $searchFieldSize ] && maxRow=$searchFieldSize
-
-		row=$minRow
-		sensorXR=$(( sensorX - extendedRadius ))
-		# shellcheck disable=SC2086
-		while [ $row -le $maxRow ]
+		# a
+		lastCollSensorR=0
+		traverseFromX=$sensorX
+		traverseFromY=$(( sensorY - extendedRadius ))
+		traverseToX=$(( sensorX - extendedRadius ))
+		traverseToY=$sensorY
+		deltaX=-1
+		nextX=$traverseFromX
+		nextRow=$traverseFromY
+		while [ "$nextRow" -le "$traverseToY" ]
 		do
-			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
-			minX=$(( sensorXR + deltaY ))
-			if [ $minX -ge 0 ] && [ $minX -le $searchFieldSize ]
+			checkNextRowIsValid || continue
+
+			[ "$nextX" -lt 0 ] && break
+			if [ "$nextX" -gt $searchFieldSize ]
 			then
-				# shellcheck disable=SC2086 # Set by eval above
-				getDistance $minX $row $lastCollSensorX $lastCollSensorY
-				# shellcheck disable=SC2086 # Set by eval above
-				if [ $distance -gt $lastCollSensorR ]
-				then
-					checkCollision $minX $row
-				fi
-				row=$(( row + 1 ))
-			else
-				if [ "$row" -lt "$sensorY" ]
-				then
-					if [ $minX -lt 0 ]
-					then
-						row=$sensorY
-					else
-						row=$(( row + (minX -  searchFieldSize) ))
-					fi
-				else
-					if [ $minX -lt 0 ]
-					then
-						row=$(( row - minX ))
-					else
-						row=$maxRow
-					fi
-				fi
+				rowsToSkip=$(( nextX - searchFieldSize  ))
+				nextX=$(( nextX + (rowsToSkip * deltaX) ))
+				nextRow=$(( nextRow + rowsToSkip ))
+				continue
 			fi
+
+			advanceNextRow
 		done
 
-		row=$minRow
-		sensorXR=$(( sensorX + extendedRadius ))
-		# shellcheck disable=SC2086
-		while [ $row -le $maxRow ]
+
+		# b
+		lastCollSensorR=0
+		traverseFromX=$(( sensorX - extendedRadius ))
+		traverseFromY=$sensorY
+		traverseToX=$sensorX
+		traverseToY=$(( sensorY + extendedRadius ))
+		deltaX=1
+		nextX=$traverseFromX
+		nextRow=$traverseFromY
+
+		while [ "$nextRow" -le $traverseToY ]
 		do
-			deltaY=$(( row > sensorY ? row - sensorY : sensorY - row  ))
-			maxX=$(( sensorXR - deltaY ))
-			if [ $maxX -ge 0 ] && [ $maxX -le $searchFieldSize ]
+			checkNextRowIsValid || continue
+
+			[ "$nextX" -gt $searchFieldSize ] && break
+			if [ "$nextX" -lt 0 ]
 			then
-				# shellcheck disable=SC2086
-				getDistance $maxX $row $lastCollSensorX $lastCollSensorY
-				# shellcheck disable=SC2086
-				if [ $distance -gt $lastCollSensorR ]
-				then
-					checkCollision $maxX $row
-				fi
-				row=$(( row + 1 ))
-			else
-				if [ "$row" -lt "$sensorY" ]
-				then
-					if [ $maxX -lt 0 ]
-					then
-						row=$(( row - maxX ))
-					else
-						row=$sensorY
-					fi
-				else
-					if [ $maxX -lt 0 ]
-					then
-						row=$maxRow
-					else
-						row=$(( row + (maxX -  searchFieldSize) ))
-					fi
-				fi
+				rowsToSkip=$(( -nextX  ))
+				nextX=$(( nextX + (rowsToSkip * deltaX) ))
+				nextRow=$(( nextRow + rowsToSkip ))
+				continue
 			fi
+
+			advanceNextRow
+		done
+
+		# c
+		lastCollSensorR=0
+		traverseFromX=$(( sensorX + extendedRadius ))
+		traverseFromY=$sensorY
+		traverseToX=$sensorX
+		traverseToY=$(( sensorY + extendedRadius ))
+		deltaX=-1
+		nextX=$traverseFromX
+		nextRow=$traverseFromY
+		while [ "$nextRow" -le $traverseToY ]
+		do
+			checkNextRowIsValid || continue
+
+			[ $nextX -lt 0 ] && break
+			if [ "$nextX" -gt $searchFieldSize ]
+			then
+				rowsToSkip=$(( nextX - searchFieldSize  ))
+				nextX=$(( nextX + (rowsToSkip * deltaX) ))
+				nextRow=$(( nextRow + rowsToSkip ))
+				continue
+			fi
+
+			advanceNextRow
+		done
+
+		# d
+		lastCollSensorR=0
+		traverseFromX=$sensorX
+		traverseFromY=$(( sensorY - extendedRadius ))
+		traverseToX=$(( sensorX + extendedRadius ))
+		traverseToY=$sensorY
+		deltaX=1
+		nextX=$traverseFromX
+		nextRow=$traverseFromY
+		while [ "$nextRow" -le "$traverseToY" ]
+		do
+			checkNextRowIsValid || continue
+
+			[ "$nextX" -gt $searchFieldSize ] && break
+			if [ "$nextX" -lt 0 ]
+			then
+				rowsToSkip=$(( -nextX  ))
+				nextX=$(( nextX + (rowsToSkip * deltaX) ))
+				nextRow=$(( nextRow + rowsToSkip ))
+				continue
+			fi
+
+			advanceNextRow
 		done
 
 		sensorToInspect=$(( sensorToInspect + 1 ))
