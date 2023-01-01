@@ -136,7 +136,11 @@ updateIntersectionAtRow()
 	if pointIsInPlane $intsX $intsY $x1 $y1 $r1 \
 		&& pointIsInPlane $intsX $intsY $x2 $y2 $r2
 	then
-		intersectionAtRow=$intsY
+		if [ -z "$intersectionAtRow" ] \
+			|| [ "$intersectionAtRow" -lt $intsY ]
+		then
+			intersectionAtRow=$intsY
+		fi
 		return 0
 	fi
 
@@ -156,7 +160,11 @@ updateIntersectionAtRow()
 			if pointIsInPlane $intsX $intsY $x1 $y1 $r1 \
 				&& pointIsInPlane $intsX $intsY $x2 $y2 $r2
 			then
-				intersectionAtRow=$intsY
+				if [ -z "$intersectionAtRow" ] \
+					|| [ "$intersectionAtRow" -lt $intsY ]
+				then
+					intersectionAtRow=$intsY
+				fi
 				return 0
 			fi
 			intsX=$(( intsX - 1 ))
@@ -181,15 +189,13 @@ calcIntersection_AC()
 	calcLineIntersection \
 		$xa $ya $xb $yb \
 		$x2 $(( y2 - r2 )) $(( x2 - r2 )) $y2 # x - a
-	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
-	[ -n "$intersectionAtRow" ] && return 0
+	updateIntersectionAtRow
 
 	# shellcheck disable=SC2086
 	calcLineIntersection \
 		$xa $ya $xb $yb \
 		$(( x2 + r2 )) $y2 $x2 $(( y2 + r2 )) # x - c
-	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
-	[ -n "$intersectionAtRow" ] && return 0
+	updateIntersectionAtRow
 
 	# Compensate for rounding errors
 	[ -n "$intersectionAtRow" ] \
@@ -211,15 +217,13 @@ calcIntersection_BD()
 	calcLineIntersection \
 		$xa $ya $xb $yb \
 		$(( x2 - r2 )) $y2 $x2 $(( y2 + r2 )) # x - b
-	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
-	[ -n "$intersectionAtRow" ] && return 0
+	updateIntersectionAtRow
 
 	# shellcheck disable=SC2086
 	calcLineIntersection \
 		$xa $ya $xb $yb \
 		$x2 $(( y2 - r2 )) $(( x2 + r2 )) $y2 # x - d
-	[ -n "$lineIntersectionY" ] && updateIntersectionAtRow
-	[ -n "$intersectionAtRow" ] && return 0
+	updateIntersectionAtRow
 
 	# Compensate for rounding errors
 	[ -n "$intersectionAtRow" ] \
