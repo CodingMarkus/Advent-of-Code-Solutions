@@ -40,13 +40,13 @@ do
 			dirname="${line#"$ cd "}"
 			[ -d "$dirname" ] || mkdir "$dirname"
 			cd "$dirname"
-			;;
+		;;
 
 		[0-9][0-9]*)
 			filename=${line##[0-9][0-9]* }
 			filesize=${line%"$filename"}
 			printf "%s" "$filesize" >"$filename"
-			;;
+		;;
 
 		"$ ls"|"dir "*) ;;
 
