@@ -11,6 +11,8 @@ Syntax:
 
 	run.sh <day> <part> [sample]
 
+	run.sh all
+
 E.g.:
 
 	run.sh 12 1 [sample|input]
@@ -20,15 +22,39 @@ Day must be 1 to 25, part must be either 1 or 2.
 If part is followed by the optional parameter \"sample\", then only the sample
 calculation is peformed. If it is followed by \"input\", then only the puzzle
 input calculation is performed.
+
+If day is \"all\" then all days and all parts available are executed and
+execution stops on first incorrect result or first slow processing time.
+Processing time is considered slow if above $slowProcessing seconds.
 " >&2
 	exit 1
 }
 
-if [ $# -ne 2 ] && [ $# -ne 3 ]
+
+if [ $# -eq 1 ] && [ "$1" = all ]
 then
-	syntaxError
+	runCMD=$0
+	for day in *
+	do
+		case $day in *[!0-9]*) continue ; esac
+		[ -d "$day" ] || continue
+
+		echo "Running day $day, part 1"
+		"$runCMD" "$day" 1
+
+		echo
+
+		echo "Running day $day, part 2"
+		"$runCMD" "$day" 2
+
+		echo
+		echo
+	done
+	exit 0
 fi
 
+
+if [ $# -ne 2 ] && [ $# -ne 3 ]
 then
 	syntaxError
 fi
@@ -143,4 +169,16 @@ then
 	echo
 	exit 1
 fi
-if [ "$sampleTime" -gt $(( slowProcessing * 1000 )) ]then	echo "Slow sample data time!"	exit 1fiif [ "$inputTime" -gt  $(( slowProcessing * 1000 )) ]then	echo "Slow input data time!"	exit 1fi
+
+
+if [ "$sampleTime" -gt $(( slowProcessing * 1000 )) ]
+then
+	echo "Slow sample data time!"
+	exit 1
+fi
+
+if [ "$inputTime" -gt  $(( slowProcessing * 1000 )) ]
+then
+	echo "Slow input data time!"
+	exit 1
+fi
