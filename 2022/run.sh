@@ -2,7 +2,7 @@
 
 set -e
 
-slowProcessing=20
+slowProcessing=30
 
 syntaxError()
 {
