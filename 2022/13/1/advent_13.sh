@@ -146,4 +146,4 @@ then
 	exit 1
 fi
 
-echo "Sum is: $indexSum"
+echo "Sum: $indexSum"

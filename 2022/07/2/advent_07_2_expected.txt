@@ -1,2 +1,2 @@
-Sum: 24933642
-Sum: 545729
+Best dir size: 24933642
+Best dir size: 545729

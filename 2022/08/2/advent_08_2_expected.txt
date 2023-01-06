@@ -1,2 +1,2 @@
-Visible trees: 8
-Visible trees: 288120
+Highest score: 8
+Highest score: 288120
