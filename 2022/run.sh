@@ -23,9 +23,12 @@ If part is followed by the optional parameter \"sample\", then only the sample
 calculation is peformed. If it is followed by \"input\", then only the puzzle
 input calculation is performed.
 
+If calculations match expectations and processing time is not too slow, the
+exit code is 0, otherwise it is 1. Processing time is consideredoo slow if
+above $slowProcessing seconds.
+
 If day is \"all\" then all days and all parts available are executed and
 execution stops on first incorrect result or first slow processing time.
-Processing time is considered slow if above $slowProcessing seconds.
 " >&2
 	exit 1
 }
