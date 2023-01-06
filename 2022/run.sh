@@ -1,5 +1,9 @@
 #!/bin/sh
 
+set -e
+
+slowProcessing=20
+
 syntaxError()
 {
 	echo "
@@ -64,16 +68,79 @@ else
 	part=
 fi
 
-echo
-echo "Calculated:"
-echo
-sh "advent_$day${part}.sh" < "advent_$day${part}_sample.txt"
-if [ -z "$sample" ]
+newline=$( printf '\n_' )
+readonly newline="${newline%_}"
+
+tmp=$( mktemp -d )
+readonly tmp
+trap 'rm -rf "$tmp"' EXIT
+
+readonly timeFile="$tmp/runtime"
+
+resultOK=1
+expected=$( cat "advent_$day${part}_expected.txt" )
+
+# The build-in time command of zsh doesn't even know the -p option.
+# The build-in time command of bash only changes the output format but
+# doesn't print the results to stderr.
+# The POSIX standard mandates -p to be known and it also explicitely requires
+# times to be printed in a given format to stderr if that option is used!
+timeCMD="/usr/bin/time"
+
+if [ -z "$data" ] || [ "$data" = "sample" ]
 then
-	sh "advent_$day${part}.sh" < "advent_$day${part}_input.txt"
+	scriptFile="advent_$day${part}.sh"
+	inputFile="advent_$day${part}_sample.txt"
+	sampleRes=$( "$timeCMD" -p sh "$scriptFile" <"$inputFile" 2>"$timeFile" )
+
+	sampleTimeRaw=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
+	sampleTime=$( printf '%s\n' "scale=0; ($sampleTimeRaw * 1000) / 1" | bc )
+	echo "Processing sample data took $sampleTimeRaw seconds."
+
+	case $expected in
+		"${sampleRes}${newline}"*) ;;
+		*) resultOK=0
+	esac
+else
+	sampleRes="--- n/a ---"
+	sampleTime=0
 fi
-echo
-echo "Expected:"
-echo
-cat "advent_$day${part}_expected.txt"
-echo
+
+if [ -z "$data" ] || [ "$data" = "input" ]
+then
+	scriptFile="advent_$day${part}.sh"
+	inputFile="advent_$day${part}_input.txt"
+	inputRes=$( "$timeCMD" -p sh "$scriptFile" <"$inputFile" 2>"$timeFile" )
+
+	inputTimeRaw=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
+	inputTime=$( printf '%s\n' "scale=0; ($inputTimeRaw * 1000) / 1" | bc )
+	echo "Processing input data took $inputTimeRaw seconds."
+
+	case $expected in
+		*"${newline}${inputRes}"*) ;;
+		*) resultOK=0
+	esac
+else
+	inputRes="--- n/a ---"
+	inputTime=0
+fi
+
+
+if [ $resultOK -eq 0 ]
+then
+	echo "Bad result!"
+
+	echo
+	echo "Calculated:"
+	echo
+	printf '%s\n' "$sampleRes"
+	printf '%s\n' "$inputRes"
+
+	echo
+	echo "Expected:"
+	echo
+	printf '%s\n' "$expected"
+	echo
+	exit 1
+fi
+if [ "$sampleTime" -gt $(( slowProcessing * 1000 )) ]then	echo "Slow sample data time!"	exit 1fiif [ "$inputTime" -gt  $(( slowProcessing * 1000 )) ]then	echo "Slow input data time!"	exit 1fi
