@@ -57,6 +57,7 @@ done
 sum=0
 
 cd "$tmp"
+# shellcheck disable=SC2044
 for d in $( find . -type d )
 do
 	add=$(

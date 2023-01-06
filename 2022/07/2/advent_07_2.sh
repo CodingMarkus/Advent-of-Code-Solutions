@@ -63,6 +63,7 @@ sizeMissing=$(( sizeRequired - ( totalSize - sizeInUse ) ))
 
 
 smallestSum=$totalSize
+# shellcheck disable=SC2044
 for d in $( find . -type d )
 do
 	sum=$( cd "$d"; sumFileSizes )
