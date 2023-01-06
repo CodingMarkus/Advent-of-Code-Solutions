@@ -9,12 +9,13 @@ Syntax:
 
 E.g.:
 
-	run.sh 12 1 [sample]
+	run.sh 12 1 [sample|input]
 
 Day must be 1 to 25, part must be either 1 or 2.
 
-If part is followed by the optional parameter \"sample\",
-then only the sample calculation is peformed.
+If part is followed by the optional parameter \"sample\", then only the sample
+calculation is peformed. If it is followed by \"input\", then only the puzzle
+input calculation is performed.
 " >&2
 	exit 1
 }
@@ -24,14 +25,15 @@ then
 	syntaxError
 fi
 
-if [ $# -eq 3 ] && [ "$3" != "sample" ]
 then
 	syntaxError
 fi
 
 day=$1
 part=$2
-sample=$3
+
+data=
+[ $# -eq 3 ] && data=$3
 
 if [ "$day" -lt 1 ] || [ "$day" -gt 25 ]
 then
@@ -47,6 +49,11 @@ if [ "$day" -lt 10 ] && [ ${#day} -eq 1 ]
 then
 	day="0$day"
 fi
+
+case $data in
+	''|'sample'|'input') ;;
+	*) syntaxError
+esac
 
 cd "$(dirname "$0" )/$day/$part" || { echo "cd error" >&2; exit 1; }
 
