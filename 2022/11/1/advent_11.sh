@@ -63,13 +63,6 @@ done
 setupMonkey "$monkey"
 
 
-
-addItemToMonkey()
-{
-	eval "monkey_${2}_items=\"\$monkey_${2}_items $1\""
-}
-
-
 round=0
 while [ $round -lt 20 ]
 do
@@ -78,19 +71,12 @@ do
 	no=0
 	while [ $no -lt $monkeyCount ]
 	do
-		op=
-		div=
-		items=
-		onTrue=0
-		onFalse=0
-		counter=0
-
-		eval "op=\$monkey_${no}_op"
-		eval "div=\$monkey_${no}_div"
-		eval "items=\$monkey_${no}_items"
-		eval "onTrue=\$monkey_${no}_onTrue"
-		eval "onFalse=\$monkey_${no}_onFalse"
-		eval "counter=\$monkey_${no}_counter"
+		eval op='$'monkey_${no}_op
+		eval div='$'monkey_${no}_div
+		eval onT='$'monkey_${no}_onTrue
+		eval onF='$'monkey_${no}_onFalse
+		eval items='$'monkey_${no}_items
+		eval counter='$'monkey_${no}_counter
 
 		for item in $items
 		do
@@ -104,15 +90,17 @@ do
 
 			if [ $(( item % div )) -eq 0 ]
 			then
-				addItemToMonkey $item $onTrue
+				# shellcheck disable=SC2154,SC2086
+				eval monkey_${onT}_items=\"\$monkey_${onT}_items $item\"
 			else
-				addItemToMonkey $item $onFalse
+				# shellcheck disable=SC2154,SC2086
+				eval monkey_${onF}_items=\"\$monkey_${onF}_items $item\"
 			fi
 
 		done
 
-		eval "monkey_${no}_items="
-		eval "monkey_${no}_counter=\$counter"
+		eval monkey_${no}_items=
+		eval monkey_${no}_counter="\$counter"
 
 		no=$(( no + 1 ))
 	done
