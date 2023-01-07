@@ -141,10 +141,10 @@ updateIntersectionAtRow()
 	fi
 
 	# Compensate for rounding errors
-	intsXMax=$(( intsX + 2 ))
-	intsYMax=$(( intsY + 2 ))
-	intsXMin=$(( intsX - 2 ))
-	intsYMin=$(( intsY - 2 ))
+	intsXMax=$(( intsX + 1 ))
+	intsYMax=$(( intsY + 1 ))
+	intsXMin=$(( intsX - 1 ))
+	intsYMin=$(( intsY - 1 ))
 
 	intsY=$intsYMax
 	while [ $intsY -ge $intsYMin ]
@@ -181,10 +181,6 @@ calcIntersection_C()
 		$xa $ya $xb $yb \
 		$(( x2 + r2 )) $y2 $x2 $(( y2 + r2 )) # x - c
 	updateIntersectionAtRow
-
-	# Compensate for rounding errors
-	[ -n "$intersectionAtRow" ] \
-		&& intersectionAtRow=$(( intersectionAtRow - 2 ))
 	return 0
 }
 
@@ -204,10 +200,6 @@ calcIntersection_B()
 		$xa $ya $xb $yb \
 		$(( x2 - r2 )) $y2 $x2 $(( y2 + r2 )) # x - b
 	updateIntersectionAtRow
-
-	# Compensate for rounding errors
-	[ -n "$intersectionAtRow" ] \
-		&& intersectionAtRow=$(( intersectionAtRow - 2 ))
 	return 0
 }
 
@@ -267,12 +259,7 @@ advanceNextRow()
 		else
 			# Compensate for rounding errors
 			nextRow=$(( nextRow + 1 ))
-			if [ $nextRow -gt $(( intersectionAtRow + 6 )) ]
-			then
-				nextRow=$(( traverseToY + 1 ))
-			else
-				nextX=$(( nextX + deltaX ))
-			fi
+			nextX=$(( nextX + deltaX ))
 		fi
 	fi
 }
