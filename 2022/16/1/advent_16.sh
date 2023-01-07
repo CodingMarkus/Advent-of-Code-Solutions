@@ -20,7 +20,7 @@ do
 		| sed 's/.* valves\{0,1\} \(.*\)$/\1/' | tr ',' ' ' )
 
 	eval "v_${valve}_r=\$rate"
-	eval "v_${valve}_e=\$exits"
+	eval "v_${valve}_exits=\$exits"
 
 	if  [ "$rate" -gt 0 ]
 	then
@@ -55,12 +55,12 @@ findLowestCosts()
 	blacklist=
 	greylist=$fromValve
 
+	# shellcheck disable=2086
 	while [ -n "$greylist" ]
 	do
 		newGreylist=
 		for valve in $greylist
 		do
-			# shellcheck disable=2086
 			eval costsExists='$'c_${fromValve}_${valve}
 			if [ -z "$costsExists" ]
 			then
@@ -76,17 +76,17 @@ findLowestCosts()
 				break
 			fi
 
-			eval ex="\$v_${valve}_e"
-			for ex in $ex
+			eval exits="\$v_${valve}_exits"
+			for exit in $exits
 			do
-				case " $blacklist " in *" $ex "*) continue; esac
-				newGreylist="$newGreylist $ex"
+				case $blacklist in *" $exit "*) continue; esac
+				newGreylist="$newGreylist $exit"
 			done
 		done
 
 		if [ -n "$newGreylist" ]
 		then
-			blacklist="$blacklist $greylist"
+			blacklist="${blacklist}${greylist}"
 		fi
 
 		lowest=$(( lowest + 1 ))
@@ -128,9 +128,10 @@ next()
 {
 	for v in $toOpen
 	do
-		case $2 in *":$v:"* ) continue; esac
-		eval c="\$c_${1}_${v}"
-		if [ $c -lt $3 ]; then open $v "$2" $(( $3 - c )) $4; fi
+		case $2 in *":$v:"* ) ;; *)
+			eval c="\$c_${1}_${v}"
+			if [ $c -lt $3 ]; then open $v "$2" $(( $3 - c )) $4; fi
+		esac
 	done
 }
 
