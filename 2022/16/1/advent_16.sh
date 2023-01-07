@@ -20,7 +20,7 @@ do
 		| sed 's/.* valves\{0,1\} \(.*\)$/\1/' | tr ',' ' ' )
 
 	eval "v_${valve}_r=\$rate"
-	eval "v_${valve}_ex=\$exits"
+	eval "v_${valve}_e=\$exits"
 
 	if  [ "$rate" -gt 0 ]
 	then
@@ -41,7 +41,7 @@ findLowestCosts()
 	[ -n "$costsExists" ] && return 0
 
 	# Direct connection?
-	exits=; eval "exits=\$v_${fromValve}_ex"
+	exits=; eval "exits=\$v_${fromValve}_e"
 	case " $exits " in *" $toValve "*)
 			eval "c_${fromValve}_${toValve}=2"
 			eval "c_${toValve}_${fromValve}=2"
@@ -50,7 +50,7 @@ findLowestCosts()
 	esac
 
 	# shellcheck disable=2034 # Used by eval's below
-	lowestCosts=1
+	lowest=1
 
 	blacklist=
 	greylist=$fromValve
@@ -64,19 +64,19 @@ findLowestCosts()
 			eval costsExists='$'c_${fromValve}_${valve}
 			if [ -z "$costsExists" ]
 			then
-				eval "c_${fromValve}_${valve}=\$lowestCosts"
-				eval "c_${valve}_${fromValve}=\$lowestCosts"
+				eval "c_${fromValve}_${valve}=\$lowest"
+				eval "c_${valve}_${fromValve}=\$lowest"
 			fi
 
 			if [ "$valve" = "$toValve" ]
 			then
-				eval "c_${fromValve}_${toValve}=\$lowestCosts"
-				eval "c_${toValve}_${fromValve}=\$lowestCosts"
+				eval "c_${fromValve}_${toValve}=\$lowest"
+				eval "c_${toValve}_${fromValve}=\$lowest"
 				newGreylist=
 				break
 			fi
 
-			eval ex="\$v_${valve}_ex"
+			eval ex="\$v_${valve}_e"
 			for ex in $ex
 			do
 				case " $blacklist " in *" $ex "*) continue; esac
@@ -89,7 +89,7 @@ findLowestCosts()
 			blacklist="$blacklist $greylist"
 		fi
 
-		lowestCosts=$(( lowestCosts + 1 ))
+		lowest=$(( lowest + 1 ))
 		greylist=$newGreylist
 	done
 
@@ -122,44 +122,27 @@ done
 
 best=0
 
+# shellcheck disable=2086,2154
+# $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 next()
 {
-	# $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
-
 	for v in $toOpen
 	do
-		case $2 in *" $v "* ) continue; esac
-
-		# shellcheck disable=2086
-		if [ $v != $1 ]
-		then
-			eval c="\$c_${1}_${v}"
-			# shellcheck disable=2154
-			if [ $c -lt $3 ]
-			then
-				open $v "$2" $(( $3 - c )) $4
-			fi
-		fi
+		case $2 in *":$v:"* ) continue; esac
+		eval c="\$c_${1}_${v}"
+		if [ $c -lt $3 ]; then open $v "$2" $(( $3 - c )) $4; fi
 	done
 }
 
 
+# shellcheck disable=2086,2154
+# $1=valveToOpen, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 open()
 {
-	# $1=valveToOpen, $2=openValves, $3=timeRemaining, $4=releaseSoFar
-
-	# shellcheck disable=2086
 	eval r='$'v_${1}_r
-	# shellcheck disable=2154
 	rel=$(( $4 + ( $3 * r) ))
-
 	[ $rel -gt $best ] && best=$rel
-
-	# shellcheck disable=2086
-	if [ $3 -ge 2 ]
-	then
-		next $1 "$2 $1" $3 $rel
-	fi
+	if [ $3 -ge 2 ]; then next $1 "$2:$1:" $3 $rel; fi
 }
 
 open 'AA' '' 30 0
