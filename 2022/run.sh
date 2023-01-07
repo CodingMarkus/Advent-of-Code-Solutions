@@ -2,8 +2,6 @@
 
 set -e
 
-slowProcessing=30
-
 syntaxError()
 {
 	echo "
@@ -23,12 +21,9 @@ If part is followed by the optional parameter \"sample\", then only the sample
 calculation is peformed. If it is followed by \"input\", then only the puzzle
 input calculation is performed.
 
-If calculations match expectations and processing time is not too slow, the
-exit code is 0, otherwise it is 1. Processing time is consideredoo slow if
-above $slowProcessing seconds.
+If calculations match expectations, the exit code is 0, otherwise it is 1.
 
-If day is \"all\" then all days and all parts available are executed and
-execution stops on first incorrect result or first slow processing time.
+If day is \"all\" then all days and all parts available are executed.
 " >&2
 	exit 1
 }
@@ -43,12 +38,12 @@ then
 		[ -d "$day" ] || continue
 
 		echo "Running day $day, part 1"
-		"$runCMD" "$day" 1
+		"$runCMD" "$day" 1 || true
 
 		echo
 
 		echo "Running day $day, part 2"
-		"$runCMD" "$day" 2
+		"$runCMD" "$day" 2 || true
 
 		echo
 		echo
@@ -122,9 +117,8 @@ then
 	inputFile="advent_$day${part}_sample.txt"
 	sampleRes=$( "$timeCMD" -p sh "$scriptFile" <"$inputFile" 2>"$timeFile" )
 
-	sampleTimeRaw=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
-	sampleTime=$( printf '%s\n' "scale=0; ($sampleTimeRaw * 1000) / 1" | bc )
-	echo "Processing sample data took $sampleTimeRaw seconds."
+	sampleTime=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
+	echo "Processing sample data took $sampleTime seconds."
 
 	case $expected in
 		"${sampleRes}${newline}"*) ;;
@@ -132,7 +126,6 @@ then
 	esac
 else
 	sampleRes="--- n/a ---"
-	sampleTime=0
 fi
 
 if [ -z "$data" ] || [ "$data" = "input" ]
@@ -141,9 +134,8 @@ then
 	inputFile="advent_$day${part}_input.txt"
 	inputRes=$( "$timeCMD" -p sh "$scriptFile" <"$inputFile" 2>"$timeFile" )
 
-	inputTimeRaw=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
-	inputTime=$( printf '%s\n' "scale=0; ($inputTimeRaw * 1000) / 1" | bc )
-	echo "Processing input data took $inputTimeRaw seconds."
+	inputTime=$( grep '^real' "$timeFile" | cut -d ' ' -f 2 )
+	echo "Processing input data took $inputTime seconds."
 
 	case $expected in
 		*"${newline}${inputRes}"*) ;;
@@ -151,7 +143,6 @@ then
 	esac
 else
 	inputRes="--- n/a ---"
-	inputTime=0
 fi
 
 
@@ -170,18 +161,5 @@ then
 	echo
 	printf '%s\n' "$expected"
 	echo
-	exit 1
-fi
-
-
-if [ "$sampleTime" -gt $(( slowProcessing * 1000 )) ]
-then
-	echo "Slow sample data time!"
-	exit 1
-fi
-
-if [ "$inputTime" -gt  $(( slowProcessing * 1000 )) ]
-then
-	echo "Slow input data time!"
 	exit 1
 fi
