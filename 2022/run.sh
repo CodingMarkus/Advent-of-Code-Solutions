@@ -63,12 +63,20 @@ part=$2
 data=
 [ $# -eq 3 ] && data=$3
 
-if [ "$day" -lt 1 ] || [ "$day" -gt 25 ]
+
+isInteger()
+{
+	case $1 in ''|*[!0-9]*) return 1; esac
+	return 0
+}
+
+
+if ! isInteger "$day" || [ "$day" -lt 1 ] || [ "$day" -gt 25 ]
 then
 	syntaxError
 fi
 
-if [ "$part" -lt 1 ] || [ "$part" -gt 2 ]
+if  ! isInteger "$part" || [ "$part" -lt 1 ] || [ "$part" -gt 2 ]
 then
 	syntaxError
 fi
