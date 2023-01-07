@@ -133,11 +133,11 @@ btIdx=0
 
 openValve()
 {
-	rate=0; eval "rate=\$valve_${atValve}_rate"
+	eval rate='$'valve_${atValve}_rate
 	currentResult=$(( currentResult + ( timeRemaining * rate) ))
 
 	[ $currentResult -gt $bestResultSoFar ] && bestResultSoFar=$currentResult
-	[ $timeRemaining -eq 1 ] && return 0
+	[ $timeRemaining -le 2 ] && return 0
 
 	openValves="$openValves $atValve"
 
