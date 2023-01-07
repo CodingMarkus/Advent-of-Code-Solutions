@@ -119,7 +119,7 @@ done
 
 
 
-# Find best path combination using backtracking
+# Find best path combination using backtracking (DFS)
 
 bestResultSoFar=0
 
