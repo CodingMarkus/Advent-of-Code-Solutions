@@ -8,10 +8,7 @@
 
 set -e
 
-#allValves=
 allValvesToOpen=
-
-#maxValves=0
 maxValvesToOpen=0
 
 while read -r line
@@ -23,29 +20,17 @@ do
 	exits=$( printf '%s' "$line" \
 		| sed 's/.* valves\{0,1\} \(.*\)$/\1/' | tr ',' ' ' )
 
-#	# shellcheck disable=SC2034 # Used by eval below
-#	exitsCount=$( printf '%s' "$exits" | wc -w )
-
 	eval "valve_${valve}_rate=\$rate"
 	eval "valve_${valve}_exits=\$exits"
-#	eval "valve_${valve}_exitsCount=$(( exitsCount + 0 ))"
-
-#	allValves="$allValves $valve"
-#	eval "valves_${maxValves}=$valve"
-#	maxValves=$(( maxValves + 1 ))
 
 	if  [ "$rate" -gt 0 ]
 	then
 		allValvesToOpen="$allValvesToOpen $valve"
-#		eval "valvesToOpen_${maxValvesToOpen}=$valve"
 		maxValvesToOpen=$(( maxValvesToOpen + 1 ))
 	fi
 done
 
-#readonly allValves
 readonly allValvesToOpen
-
-#readonly maxValves
 readonly maxValvesToOpen
 
 
