@@ -8,9 +8,9 @@
 
 set -e
 
-modulo=1
+mod=1
 
-monkeyCount=0
+mCount=0
 setupMonkey()
 {
 	m=$1
@@ -40,16 +40,16 @@ setupMonkey()
 	[ -n "$onTrue" ] || { echo "Error: no onTrue monkey"; exit 1; }
 	[ -n "$onFalse" ] || { echo "Error: no onFalse monkey"; exit 1; }
 
-	eval "monkey_${no}_items=\$items"
-	eval "monkey_${no}_op=\$op"
-	eval "monkey_${no}_div=\$div"
-	eval "monkey_${no}_onTrue=\$onTrue"
-	eval "monkey_${no}_onFalse=\$onFalse"
-	eval "monkey_${no}_counter=0"
+	eval "m_${no}_it=\$items"
+	eval "m_${no}_op=\$op"
+	eval "m_${no}_div=\$div"
+	eval "m_${no}_onT=\$onTrue"
+	eval "m_${no}_onF=\$onFalse"
+	eval "m_${no}_cnt=0"
 
-	modulo=$(( modulo * div ))
+	mod=$(( mod * div ))
 
-	[ $monkeyCount -lt "$no" ] || monkeyCount=$(( no + 1 ))
+	[ $mCount -lt "$no" ] || mCount=$(( no + 1 ))
 }
 
 
@@ -66,45 +66,37 @@ do
 done
 setupMonkey "$monkey"
 
-round=0
-while [ $round -lt 10000 ]
+r=0
+# shellcheck disable=SC2154,SC2086,SC2034
+while [ $r -lt 10000 ]
 do
-	round=$(( round + 1 ))
-
+	r=$(( r + 1 ))
 	no=0
-	while [ $no -lt $monkeyCount ]
+	while [ $no -lt $mCount ]
 	do
-		eval op='$'monkey_${no}_op
-		eval div='$'monkey_${no}_div
-		eval onT='$'monkey_${no}_onTrue
-		eval onF='$'monkey_${no}_onFalse
-		eval items='$'monkey_${no}_items
-		eval counter='$'monkey_${no}_counter
+		eval op='$'m_${no}_op
+		eval div='$'m_${no}_div
+		eval onT='$'m_${no}_onT
+		eval onF='$'m_${no}_onF
+		eval it='$'m_${no}_it
+		eval cnt='$'m_${no}_cnt
 
-		for item in $items
+		for old in $it
 		do
-			counter=$(( counter + 1 ))
-
-			new=
-			# shellcheck disable=SC2034  # Referenced by op
-			old=$item
+			cnt=$(( cnt + 1 ))
 			eval ": \$(( $op ))"
-			item=$(( new % modulo ))
+			it=$(( new % mod ))
 
-			if [ $(( item % div )) -eq 0 ]
+			if [ $(( it % div )) -eq 0 ]
 			then
-				# shellcheck disable=SC2154,SC2086
-				eval monkey_${onT}_items=\"\$monkey_${onT}_items $item\"
+				eval m_${onT}_it=\"\$m_${onT}_it $it\"
 			else
-				# shellcheck disable=SC2154,SC2086
-				eval monkey_${onF}_items=\"\$monkey_${onF}_items $item\"
+				eval m_${onF}_it=\"\$m_${onF}_it $it\"
 			fi
-
 		done
 
-		eval monkey_${no}_items=
-		eval monkey_${no}_counter="\$counter"
-
+		eval m_${no}_it=
+		eval m_${no}_cnt="\$cnt"
 		no=$(( no + 1 ))
 	done
 
@@ -115,18 +107,18 @@ first=0
 second=0
 
 no=0
-while [ $no -lt $monkeyCount ]
+while [ $no -lt $mCount ]
 do
-	counter=0
-	eval "counter=\$monkey_${no}_counter"
+	cnt=0
+	eval "cnt=\$m_${no}_cnt"
 
-	if [ $counter -ge $first ]
+	if [ $cnt -ge $first ]
 	then
 		second=$first
-		first=$counter
-	elif [ $counter -gt $second ]
+		first=$cnt
+	elif [ $cnt -gt $second ]
 	then
-		second=$counter
+		second=$cnt
 	fi
 
 	no=$(( no + 1 ))
