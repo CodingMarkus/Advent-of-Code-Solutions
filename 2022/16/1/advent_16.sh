@@ -8,49 +8,49 @@
 
 set -e
 
-allValvesToOpen=
-maxValvesToOpen=0
-
+toOpen=
+maxToOpen=0
 while read -r line
 do
 	valve=$( printf '%s' "$line" | sed 's/^Valve \([A-Z][A-Z]\) .*/\1/' )
 	rate=$( printf '%s' "$line" | sed 's/.*rate=\([0-9]\{1,\}\).*/\1/' )
 
-	# shellcheck disable=SC2034 # Used by eval below
+	# shellcheck disable=2034 # Used by eval below
 	exits=$( printf '%s' "$line" \
 		| sed 's/.* valves\{0,1\} \(.*\)$/\1/' | tr ',' ' ' )
 
-	eval "valve_${valve}_rate=\$rate"
-	eval "valve_${valve}_exits=\$exits"
+	eval "v_${valve}_r=\$rate"
+	eval "v_${valve}_ex=\$exits"
 
 	if  [ "$rate" -gt 0 ]
 	then
-		allValvesToOpen="$allValvesToOpen $valve"
-		maxValvesToOpen=$(( maxValvesToOpen + 1 ))
+		toOpen="$toOpen $valve"
+		maxToOpen=$(( maxToOpen + 1 ))
 	fi
 done
 
-readonly allValvesToOpen
-readonly maxValvesToOpen
+readonly toOpen
+readonly maxToOpen
 
 
-# Find all pathes using BFS
-findBestPathes()
+# Find lowest costs to move to and open valve using BFS
+findLowestCosts()
 {
-	# Path already exists?
-	pathExists=; eval "pathExists=\$path_${fromValve}_${toValve}"
-	[ -n "$pathExists" ] && return 0
+	# shellcheck disable=2086
+	eval costsExists='$'c_${fromValve}_${toValve}
+	[ -n "$costsExists" ] && return 0
 
 	# Direct connection?
-	exits=; eval "exits=\$valve_${fromValve}_exits"
+	exits=; eval "exits=\$v_${fromValve}_ex"
 	case " $exits " in *" $toValve "*)
-			eval "path_${fromValve}_${toValve}=1"
-			eval "path_${toValve}_${fromValve}=1"
+			eval "c_${fromValve}_${toValve}=2"
+			eval "c_${toValve}_${fromValve}=2"
 			return 0
 		;;
 	esac
 
-	lowestSteps=0
+	# shellcheck disable=2034 # Used by eval's below
+	lowestCosts=1
 
 	blacklist=
 	greylist=$fromValve
@@ -60,23 +60,24 @@ findBestPathes()
 		newGreylist=
 		for valve in $greylist
 		do
-			pathExists=; eval "pathExists=\$path_${fromValve}_${valve}"
-			if [ -z "$pathExists" ]
+			# shellcheck disable=2086
+			eval costsExists='$'c_${fromValve}_${valve}
+			if [ -z "$costsExists" ]
 			then
-				eval "path_${fromValve}_${valve}=$lowestSteps"
-				eval "path_${valve}_${fromValve}=$lowestSteps"
+				eval "c_${fromValve}_${valve}=\$lowestCosts"
+				eval "c_${valve}_${fromValve}=\$lowestCosts"
 			fi
 
 			if [ "$valve" = "$toValve" ]
 			then
-				eval "path_${fromValve}_${toValve}=$lowestSteps"
-				eval "path_${toValve}_${fromValve}=$lowestSteps"
+				eval "c_${fromValve}_${toValve}=\$lowestCosts"
+				eval "c_${toValve}_${fromValve}=\$lowestCosts"
 				newGreylist=
 				break
 			fi
 
-			exits=; eval "exits=\$valve_${valve}_exits"
-			for ex in $exits
+			eval ex="\$v_${valve}_ex"
+			for ex in $ex
 			do
 				case " $blacklist " in *" $ex "*) continue; esac
 				newGreylist="$newGreylist $ex"
@@ -84,12 +85,11 @@ findBestPathes()
 		done
 
 		if [ -n "$newGreylist" ]
-		# if [ ${#newGreylist} -ne 0 ]
 		then
 			blacklist="$blacklist $greylist"
 		fi
 
-		lowestSteps=$(( lowestSteps + 1 ))
+		lowestCosts=$(( lowestCosts + 1 ))
 		greylist=$newGreylist
 	done
 
@@ -98,76 +98,69 @@ findBestPathes()
 
 
 counter=0
-for fromValve in $allValvesToOpen
+for fromValve in $toOpen
 do
 	counter=$(( counter + 1 ))
-	if [ $counter -eq  $maxValvesToOpen ]
+	if [ $counter -eq  $maxToOpen ]
 	then
-		# We already have all paths from/to the last vault to open
-		# but we are still missing paths from/to the start
+		# We already have all costs from/to the last vault to open
+		# but we are still missing costs from the start
 		fromValve='AA'
 	fi
 
-	for toValve in $allValvesToOpen
+	for toValve in $toOpen
 	do
 		if [ "$fromValve" != "$toValve" ]
 		then
-			findBestPathes
+			findLowestCosts
 		fi
 	done
 done
 
 
-
 # Find best path combination using backtracking (DFS)
 
-bestResultSoFar=0
+best=0
 
-atValve='AA'
-openValves=
-currentResult=0
-timeRemaining=30
-
-
-btIdx=0
-
-openValve()
+next()
 {
-	eval rate='$'valve_${atValve}_rate
-	currentResult=$(( currentResult + ( timeRemaining * rate) ))
+	# $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 
-	[ $currentResult -gt $bestResultSoFar ] && bestResultSoFar=$currentResult
-	[ $timeRemaining -le 2 ] && return 0
-
-	openValves="$openValves $atValve"
-
-	for valve in $allValvesToOpen
+	for v in $toOpen
 	do
-		travelTime=; eval "travelTime=\$path_${atValve}_${valve}"
-		if [ $(( travelTime + 1 )) -lt $timeRemaining ]
+		case $2 in *" $v "* ) continue; esac
+
+		# shellcheck disable=2086
+		if [ $v != $1 ]
 		then
-			case " $openValves " in *" $valve "*) ;;
-			*)
-				eval "stack_${btIdx}_at=\$atValve"
-				eval "stack_${btIdx}_open=\$openValves"
-				eval "stack_${btIdx}_result=\$currentResult"
-				eval "stack_${btIdx}_time=\$timeRemaining"
-				btIdx=$(( btIdx + 1 ))
-
-				timeRemaining=$(( timeRemaining - travelTime - 1))
-				atValve=$valve
-				openValve
-
-				btIdx=$(( btIdx - 1 ))
-				eval "atValve=\$stack_${btIdx}_at"
-				eval "openValves=\$stack_${btIdx}_open"
-				eval "currentResult=\$stack_${btIdx}_result"
-				eval "timeRemaining=\$stack_${btIdx}_time"
-			esac
+			eval c="\$c_${1}_${v}"
+			# shellcheck disable=2154
+			if [ $c -lt $3 ]
+			then
+				open $v "$2" $(( $3 - c )) $4
+			fi
 		fi
 	done
 }
 
-openValve
 
-echo "Most pressure release: $bestResultSoFar"
+open()
+{
+	# $1=valveToOpen, $2=openValves, $3=timeRemaining, $4=releaseSoFar
+
+	# shellcheck disable=2086
+	eval r='$'v_${1}_r
+	# shellcheck disable=2154
+	rel=$(( $4 + ( $3 * r) ))
+
+	[ $rel -gt $best ] && best=$rel
+
+	# shellcheck disable=2086
+	if [ $3 -ge 2 ]
+	then
+		next $1 "$2 $1" $3 $rel
+	fi
+}
+
+open 'AA' '' 30 0
+echo "Most pressure release: $best"
