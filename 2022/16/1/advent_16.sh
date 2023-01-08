@@ -130,7 +130,7 @@ next()
 	do
 		case $2 in *":$v:"* ) ;; *)
 			eval c="\$c_${1}_${v}"
-			if [ $c -lt $3 ]; then open $v "$2" $(( $3 - c )) $4; fi
+			if [ $c -lt $3 ]; then open $v "$2:$v:" $(( $3 - c )) $4; fi
 		esac
 	done
 }
@@ -143,8 +143,8 @@ open()
 	eval r='$'v_${1}_r
 	rel=$(( $4 + ( $3 * r) ))
 	[ $rel -gt $best ] && best=$rel
-	if [ $3 -ge 2 ]; then next $1 "$2:$1:" $3 $rel; fi
+	if [ $3 -ge 2 ]; then next $1 "$2" $3 $rel; fi
 }
 
-open 'AA' '' 30 0
+next 'AA' '' 30 0
 echo "Most pressure release: $best"
