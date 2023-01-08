@@ -7,13 +7,13 @@ syntaxError()
 	echo "
 Syntax:
 
-	run.sh <day> <part> [sample]
+	run.sh <day> <part> [sample|input|dev|debug]
 
 	run.sh all
 
 E.g.:
 
-	run.sh 12 1 [sample|input]
+	run.sh 12 1
 
 Day must be 1 to 25, part must be either 1 or 2.
 
@@ -21,7 +21,14 @@ If part is followed by the optional parameter \"sample\", then only the sample
 calculation is peformed. If it is followed by \"input\", then only the puzzle
 input calculation is performed.
 
-If calculations match expectations, the exit code is 0, otherwise it is 1.
+\"dev\" is like \"sample\" and \"debug\" is like \"input\" but they are not
+timed, the ouptput is not buffered, stderr is passed through, and the output is
+not matched against the expected output, the expected output is just printed
+below and incorrect output does not affect the exit code.
+
+Exit code is exit code of the calculation script called and if the script
+finishd with exit code 0, the output is compared to the expected one. If the
+expectation is met, the exit code of this script is also 0, otherwise 1.
 
 If day is \"all\" then all days and all parts available are executed.
 " >&2
@@ -87,7 +94,7 @@ then
 fi
 
 case $data in
-	''|'sample'|'input') ;;
+	''|'sample'|'input'|'dev'|'debug') ;;
 	*) syntaxError
 esac
 
@@ -100,6 +107,42 @@ else
 	part=
 fi
 
+
+expected=$( cat "advent_$day${part}_expected.txt" )
+
+if [ "$data" = "dev" ]
+then
+	echo
+	echo "Calculated:"
+	echo
+	scriptFile="advent_$day${part}.sh"
+	inputFile="advent_$day${part}_sample.txt"
+	sh "$scriptFile" <"$inputFile"
+	echo
+	echo "Expected:"
+	echo
+	printf '%s\n' "$expected"
+	echo
+	exit 0
+fi
+
+if [ "$data" = "debug" ]
+then
+	echo
+	echo "Calculated:"
+	echo
+	scriptFile="advent_$day${part}.sh"
+	inputFile="advent_$day${part}_input.txt"
+	sh "$scriptFile" <"$inputFile"
+	echo
+	echo "Expected:"
+	echo
+	printf '%s\n' "$expected"
+	echo
+	exit 0
+fi
+
+
 newline=$( printf '\n_' )
 readonly newline="${newline%_}"
 
@@ -110,7 +153,6 @@ trap 'rm -rf "$tmp"' EXIT
 readonly timeFile="$tmp/runtime"
 
 resultOK=1
-expected=$( cat "advent_$day${part}_expected.txt" )
 
 # The build-in time command of zsh doesn't even know the -p option.
 # The build-in time command of bash only changes the output format but
