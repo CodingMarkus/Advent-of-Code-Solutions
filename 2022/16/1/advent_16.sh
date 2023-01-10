@@ -11,10 +11,6 @@ set -e
 # Parse input data
 
 toOpen=
-maxRate=0
-maxRateAt=
-maxRate2=0
-maxRate2At=
 maxToOpen=0
 
 while read -r line
@@ -33,25 +29,10 @@ do
 	then
 		toOpen="$toOpen $valve"
 		maxToOpen=$(( maxToOpen + 1 ))
-		if [ "$rate" -gt "$maxRate" ]
-		then
-			maxRate2=$maxRate
-			maxRate2At=$maxRateAt
-			maxRate=$rate
-			maxRateAt=$valve
-		elif [ "$rate" -gt "$maxRate2" ]
-		then
-			maxRate2=$rate
-			maxRate2At=$valve
-		fi
 	fi
 done
 
 readonly toOpen
-readonly maxRate
-readonly maxRateAt
-readonly maxRate2
-readonly maxRate2At
 readonly maxToOpen
 
 
@@ -144,19 +125,49 @@ done
 
 # We can discard any approach that is worse than the greedy approach
 
-# Max release by single vault (maxr)
-# and time left if opening it first (maxtl)
-eval c="\$c_AA_${maxRateAt}"
-# shellcheck disable=2154 # Set by eval above
-readonly maxtl=$(( 30 - c ))
-maxr=$(( maxtl * maxRate ))
+newline=$( printf '\n_' )
+readonly newline="${newline%_}"
 
-# Max rate by two vaults (maxr2)
-# and time left if opening them first (maxtl2)
-eval c="\$c_${maxRateAt}_${maxRate2At}"
-# shellcheck disable=2154 # Set by eval above
-readonly maxtl2=$(( maxtl - c ))
-maxr2=$(( maxr + (maxtl2 * maxRate2) ))
+ordered=
+for valve in $toOpen
+do
+	# shellcheck disable=2086
+	eval rate='$'v_${valve}_r
+	# shellcheck disable=2154
+	ordered="$ordered$rate $valve$newline"
+done
+ordered=$( printf '%s' "$ordered" | sort -nr | cut -d ' ' -f 2 )
+
+rate=0
+atValve=AA
+timeleft=30
+for valve in $ordered
+do
+	eval c="\$c_${atValve}_${valve}"
+	# shellcheck disable=2154
+	newTimeleft=$(( timeleft - c ))
+
+	while [ $timeleft -gt $newTimeleft ] && [ $timeleft -ge 0 ]
+	do
+		eval g_${timeleft}=\$rate
+		timeleft=$(( timeleft - 1 ))
+	done
+	[ $timeleft -gt 0 ] || break
+
+	# shellcheck disable=2086
+	eval r='$'v_${valve}_r
+
+	# shellcheck disable=2154
+	rate=$(( rate + (timeleft * r )))
+	atValve=$valve
+done
+
+while [ $timeleft -ge 0 ]
+do
+	eval g_${timeleft}=\$rate
+	timeleft=$(( timeleft - 1 ))
+done
+
 
 # Find best path combination using backtracking (DFS)
 
@@ -166,16 +177,11 @@ best=0
 # $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 next()
 {
-	if [ $3 -lt $maxtl2 ]; then [ $4 -lt $maxr2 ] && return 0
-		else [ $3 -lt $maxtl ] && [ $4 -lt $maxr ] && return 0; fi
-
-	for v in $toOpen
-	do
-		case $2 in *":$v:"* ) ;; *)
-			eval c="\$c_${1}_${v}"
-			if [ $c -lt $3 ]; then open $v $2:$v: $(( $3 - c )) $4; fi
-		esac
-	done
+	eval g='$'g_$3; [ $4 -lt $g ] && return 0
+	for v in $toOpen; do case $2 in *":$v:"* ) ;; *)
+		eval c="\$c_${1}_${v}"
+		if [ $c -lt $3 ]; then open $v $2:$v: $(( $3 - c )) $4; fi
+	esac; done
 }
 
 # shellcheck disable=2086,2154
