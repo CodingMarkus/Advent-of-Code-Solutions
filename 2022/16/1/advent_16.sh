@@ -123,52 +123,6 @@ do
 done
 
 
-# We can discard any approach that is worse than the greedy approach
-
-newline=$( printf '\n_' )
-readonly newline="${newline%_}"
-
-ordered=
-for valve in $toOpen
-do
-	# shellcheck disable=2086
-	eval rate='$'v_${valve}_r
-	# shellcheck disable=2154
-	ordered="$ordered$rate $valve$newline"
-done
-ordered=$( printf '%s' "$ordered" | sort -nr | cut -d ' ' -f 2 )
-
-rate=0
-atValve=AA
-timeleft=30
-for valve in $ordered
-do
-	eval c="\$c_${atValve}_${valve}"
-	# shellcheck disable=2154
-	newTimeleft=$(( timeleft - c ))
-
-	while [ $timeleft -gt $newTimeleft ] && [ $timeleft -ge 0 ]
-	do
-		eval g_${timeleft}=\$rate
-		timeleft=$(( timeleft - 1 ))
-	done
-	[ $timeleft -gt 0 ] || break
-
-	# shellcheck disable=2086
-	eval r='$'v_${valve}_r
-
-	# shellcheck disable=2154
-	rate=$(( rate + (timeleft * r )))
-	atValve=$valve
-done
-
-while [ $timeleft -ge 0 ]
-do
-	eval g_${timeleft}=\$rate
-	timeleft=$(( timeleft - 1 ))
-done
-
-
 # Find best path combination using backtracking (DFS)
 
 best=0
@@ -177,7 +131,6 @@ best=0
 # $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 next()
 {
-	eval g='$'g_$3; [ $4 -lt $g ] && return 0
 	for v in $toOpen; do case $2 in *":$v:"* ) ;; *)
 		eval c="\$c_${1}_${v}"
 		if [ $c -lt $3 ]; then open $v $2:$v: $(( $3 - c )) $4; fi
@@ -193,7 +146,6 @@ open()
 	[ $rel -gt $best ] && best=$rel
 	if [ $3 -ge 2 ]; then next $1 $2 $3 $rel; fi
 }
-
 
 next 'AA' '' 30 0
 echo "Most pressure release: $best"
