@@ -121,55 +121,10 @@ do
 done
 
 
-# # We can discard any approach that is worse than the greedy approach
-
-# newline=$( printf '\n_' )
-# readonly newline="${newline%_}"
-
-# ordered=
-# for valve in $allToOpen
-# do
-# 	# shellcheck disable=2086
-# 	eval rate='$'v_${valve}_r
-# 	# shellcheck disable=2154
-# 	ordered="$ordered$rate $valve$newline"
-# done
-# ordered=$( printf '%s' "$ordered" | sort -nr | cut -d ' ' -f 2 )
-
-# rate=0
-# atValve=AA
-# timeleft=26
-# for valve in $ordered
-# do
-# 	eval c="\$c_${atValve}_${valve}"
-# 	# shellcheck disable=2154
-# 	newTimeleft=$(( timeleft - c ))
-
-# 	while [ $timeleft -gt $newTimeleft ] && [ $timeleft -ge 0 ]
-# 	do
-# 		eval g_${timeleft}=\$rate
-# 		timeleft=$(( timeleft - 1 ))
-# 	done
-# 	[ $timeleft -gt 0 ] || break
-
-# 	# shellcheck disable=2086
-# 	eval r='$'v_${valve}_r
-
-# 	# shellcheck disable=2154
-# 	rate=$(( rate + (timeleft * r )))
-# 	atValve=$valve
-# done
-
-# while [ $timeleft -ge 0 ]
-# do
-# 	eval g_${timeleft}=\$rate
-# 	timeleft=$(( timeleft - 1 ))
-# done
-
-
 # Find best path combination using backtracking (DFS)
 
 best=0
+
 
 # shellcheck disable=2086,2154
 # $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar, $5=toOpen
@@ -177,18 +132,15 @@ next()
 {
 	for v in $5; do case $2 in *":$v:"* ) ;; *)
 		eval c="\$c_${1}_${v}"
-		if [ $c -lt $3 ]; then open $v $2:$v: $(( $3 - c )) $4 "$5"; fi
+		if [ $c -lt $3 ]; then
+			t=$(( $3 - c ))
+			eval r='$'v_${v}_r
+			rel=$(( $4 + ( t * r) ))
+			if [ $t -gt 2 ]; then next $v $2:$v: $t $rel "$5"
+				elif [ $rel -gt $best ]; then best=$rel; fi
+		fi
 	esac; done
-}
-
-# shellcheck disable=2086,2154
-# $1=valveToOpen, $2=openValves, $3=timeRemaining, $4=releaseSoFar, $5=toOpen
-open()
-{
-	eval r='$'v_${1}_r
-	rel=$(( $4 + ( $3 * r) ))
-	[ $rel -gt $best ] && best=$rel
-	if [ $3 -ge 2 ]; then next $1 $2 $3 $rel "$5"; fi
+	[ $4 -le $best ] || best=$4
 }
 
 
@@ -215,8 +167,8 @@ do
 	done
 
 	if [ ${#toOpen} -gt 6 ]; then
-		best=0; next 'AA' '' 26 0 "$toOpen"; next 'AA' '' 26 $best "$toOpenE"
-		[ $best -gt $bestTotal ] && bestTotal=$best; fi
+		best=0; next 'AA' '' 26 0 "$toOpen"; next 'AA' '' 26 "$best" "$toOpenE"
+		[ "$best" -gt "$bestTotal" ] && bestTotal=$best; fi
 	mask=$(( mask + 2 )) # We only want even masks, odd ones are only inverses!
 done
 
