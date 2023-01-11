@@ -133,18 +133,15 @@ next()
 {
 	for v in $toOpen; do case $2 in *":$v:"* ) ;; *)
 		eval c="\$c_${1}_${v}"
-		if [ $c -lt $3 ]; then open $v $2:$v: $(( $3 - c )) $4; fi
+		if [ $c -lt $3 ]; then
+			t=$(( $3 - c ))
+			eval r='$'v_${v}_r
+			rel=$(( $4 + ( t * r) ))
+			if [ $t -gt 2 ]; then next $v $2:$v: $t $rel
+				elif [ $rel -gt $best ]; then best=$rel; fi
+		fi
 	esac; done
-}
-
-# shellcheck disable=2086,2154
-# $1=valveToOpen, $2=openValves, $3=timeRemaining, $4=releaseSoFar
-open()
-{
-	eval r='$'v_${1}_r
-	rel=$(( $4 + ( $3 * r) ))
-	[ $rel -gt $best ] && best=$rel
-	if [ $3 -ge 2 ]; then next $1 $2 $3 $rel; fi
+	[ $4 -le $best ] || best=$4
 }
 
 next 'AA' '' 30 0
