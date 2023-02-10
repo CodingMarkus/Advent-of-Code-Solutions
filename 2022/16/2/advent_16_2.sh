@@ -10,7 +10,7 @@ set -e
 
 # Parse input data
 
-allToOpen=
+toOpen=
 maxToOpen=0
 
 while read -r line
@@ -27,12 +27,12 @@ do
 
 	if  [ "$rate" -gt 0 ]
 	then
-		allToOpen="$allToOpen $valve"
+		toOpen="$toOpen $valve"
 		maxToOpen=$(( maxToOpen + 1 ))
 	fi
 done
 
-readonly allToOpen
+readonly toOpen
 readonly maxToOpen
 
 
@@ -101,7 +101,7 @@ findLowestCosts()
 
 
 counter=0
-for fromValve in $allToOpen
+for fromValve in $toOpen
 do
 	counter=$(( counter + 1 ))
 	if [ $counter -eq  $maxToOpen ]
@@ -111,7 +111,7 @@ do
 		fromValve='AA'
 	fi
 
-	for toValve in $allToOpen
+	for toValve in $toOpen
 	do
 		if [ "$fromValve" != "$toValve" ]
 		then
@@ -121,55 +121,81 @@ do
 done
 
 
-# Find best path combination using backtracking (DFS)
+# Write all combinations possible within 26 minutes to a temp file
 
-best=0
+tmp=$( mktemp -d )
+currentDir=$( pwd )
+cd "$tmp"
+
+trap 'cd "$currentDir" ; rm -rf "$tmp"' EXIT
 
 
 # shellcheck disable=2086,2154
-# $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar, $5=toOpen
+# $1=atValve, $2=openValves, $3=timeRemaining, $4=releaseSoFar
 next()
 {
-	for v in $5; do case $2 in *":$v:"* ) ;; *)
+	for v in $toOpen; do case $2 in *"$v|"* ) ;; *)
 		eval c="\$c_${1}_${v}"
 		if [ $c -lt $3 ]; then
 			t=$(( $3 - c ))
 			eval r='$'v_${v}_r
 			rel=$(( $4 + ( t * r) ))
-			if [ $t -gt 2 ]; then next $v $2:$v: $t $rel "$5"
-				elif [ $rel -gt $best ]; then best=$rel; fi
+			if [ $t -gt 2 ]; then next $v "$2$v|" $t $rel
+				else printf '%s %s\n' "$4" "$2"; fi
 		fi
 	esac; done
-	[ $4 -le $best ] || best=$4
+	if [ -n "$2" ]; then printf '%s %s\n' "$4" "$2"; fi
 }
 
+# Ensure combinations are sorted by best score
+tmpfile="tmp.txt"
+( next 'AA' '' 26 0 | sort -n -r ) >"$tmpfile"
 
-# Represent all valves to open as a bitmask
-# and split into two groups, the iterate each group separately.
 
-bestTotal=0
+# Find the best combination
 
-toOpen=$allToOpen
-toOpenE=$allToOpen
+best=0
 
-mask=6
-maxMask=$(( (1 << maxToOpen) - 1 ))
+lineIdx=1
+maxLine=$(( $( cat "$tmpfile" | wc -l ) ))
 
-while [ $mask -lt $maxMask ]
+while [ $lineIdx -le $maxLine ]
 do
-	echo "$mask of $maxMask"
-	bit=1; toOpen=; toOpenE=
-	for v in $allToOpen; do
-		if [ $(( mask & bit )) -ne 0 ]
-			then toOpen="$toOpen $v"
-			else toOpenE="$toOpenE $v"; fi
-		bit=$(( bit << 1 ))
+	lineScore=
+	line=$( tail -n +$lineIdx "$tmpfile" | head -n 1 )
+	for val in $line
+	do
+		if [ -z "$lineScore" ]
+		then
+			lineScore=$val
+		else
+			grepPattern=$val
+		fi
+	done
+	grepPattern=${grepPattern%%|}
+
+	lineIdx=$(( lineIdx + 1 ))
+	line2=$( tail -n +$lineIdx "$tmpfile" \
+		| grep -E -v "$grepPattern" \
+		| head -n 1 )
+
+	[ -n "$line2" ] || continue
+
+	lineScore2=
+	for val in $line2
+	do
+		lineScore2=$val
+		break
 	done
 
-	if [ ${#toOpen} -gt 6 ]; then
-		best=0; next 'AA' '' 26 0 "$toOpen"; next 'AA' '' 26 "$best" "$toOpenE"
-		[ "$best" -gt "$bestTotal" ] && bestTotal=$best; fi
-	mask=$(( mask + 2 )) # We only want even masks, odd ones are only inverses!
+	sum=$(( lineScore + lineScore2 ))
+	if [ $sum -gt $best ]
+	then
+		best=$sum
+	elif [ $(( lineScore * 2 )) -lt $best ]
+	then
+		break
+	fi
 done
 
-echo "Most pressure release: $bestTotal"
+echo "Most pressure release: $best"
