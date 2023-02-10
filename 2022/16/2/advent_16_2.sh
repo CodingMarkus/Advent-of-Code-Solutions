@@ -172,6 +172,12 @@ do
 			grepPattern=$val
 		fi
 	done
+
+	if [ $(( lineScore * 2 )) -lt $best ]
+	then
+		break
+	fi
+
 	grepPattern=${grepPattern%%|}
 
 	lineIdx=$(( lineIdx + 1 ))
@@ -192,9 +198,6 @@ do
 	if [ $sum -gt $best ]
 	then
 		best=$sum
-	elif [ $(( lineScore * 2 )) -lt $best ]
-	then
-		break
 	fi
 done
 
