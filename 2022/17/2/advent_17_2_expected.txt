@@ -1,0 +1,2 @@
+Size of tower in units: 1514285714288
+Size of tower in units: 1554117647070

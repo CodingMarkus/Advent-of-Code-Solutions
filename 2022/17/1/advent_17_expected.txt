@@ -1,0 +1,2 @@
+Size of tower in units: 3068
+Size of tower in units: 3168
