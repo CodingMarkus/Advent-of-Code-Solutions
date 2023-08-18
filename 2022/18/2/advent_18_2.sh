@@ -77,7 +77,7 @@ haveVisited( )
 
 area=0
 
-checkLeft( )
+checkLeft()
 {
 	newX=$(( $1 - 1 ))
 	[ $newX -lt $xMin ] && return $false
@@ -97,7 +97,7 @@ checkRight()
 }
 
 
-checkUp( )
+checkUp()
 {
 	newY=$(( $2 + 1 ))
 	[ $newY -gt $yMax ] && return $false
@@ -107,7 +107,7 @@ checkUp( )
 }
 
 
-checkDown( )
+checkDown()
 {
 	newY=$(( $2 - 1 ))
 	[ $newY -lt $yMin ] && return $false
@@ -117,7 +117,7 @@ checkDown( )
 }
 
 
-checkForward( )
+checkForward()
 {
 	newZ=$(( $3 + 1 ))
 	[ $newZ -gt $zMax ] && return $false
@@ -127,7 +127,7 @@ checkForward( )
 }
 
 
-checkBackward( )
+checkBackward()
 {
 	newZ=$(( $3 - 1 ))
 	[ $newZ -lt $zMin ] && return $false
