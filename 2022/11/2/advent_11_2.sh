@@ -66,6 +66,7 @@ do
 done
 setupMonkey "$monkey"
 
+
 r=0
 # shellcheck disable=SC2154,SC2086,SC2034
 while [ $r -lt 10000 ]
@@ -74,29 +75,38 @@ do
 	no=0
 	while [ $no -lt $mCount ]
 	do
-		eval op='$'m_${no}_op
-		eval div='$'m_${no}_div
-		eval onT='$'m_${no}_onT
-		eval onF='$'m_${no}_onF
-		eval it='$'m_${no}_it
-		eval cnt='$'m_${no}_cnt
+		eval items='$'m_${no}_it
 
-		for old in $it
-		do
-			cnt=$(( cnt + 1 ))
-			eval ": \$(( $op ))"
-			it=$(( new % mod ))
+		if [ -n "$items" ]
+		then
+			eval op='$'m_${no}_op
+			eval div='$'m_${no}_div
+			eval onT='$'m_${no}_onT
+			eval onF='$'m_${no}_onF
+			eval cnt='$'m_${no}_cnt
 
-			if [ $(( it % div )) -eq 0 ]
-			then
-				eval m_${onT}_it=\"\$m_${onT}_it $it\"
-			else
-				eval m_${onF}_it=\"\$m_${onF}_it $it\"
-			fi
-		done
+			addToT=
+			addToF=
 
-		eval m_${no}_it=
-		eval m_${no}_cnt="\$cnt"
+			for old in $items
+			do
+				cnt=$(( cnt + 1 ))
+				eval ": \$(( $op ))"
+				newIt=$(( new % mod ))
+
+				if [ $(( newIt % div )) -eq 0 ]
+				then
+					addToT="$addToT $newIt"
+				else
+					addToF="$addToF $newIt"
+				fi
+			done
+
+			eval m_${no}_it=
+			eval m_${no}_cnt=$cnt
+			eval m_${onT}_it=\"\$m_${onT}_it $addToT\"
+			eval m_${onF}_it=\"\$m_${onF}_it $addToF\"
+		fi
 		no=$(( no + 1 ))
 	done
 
