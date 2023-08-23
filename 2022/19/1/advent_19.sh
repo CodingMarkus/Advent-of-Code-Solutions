@@ -116,13 +116,6 @@ reset()
 sp=0
 buildSomething()
 {
-	if [ $bestGeo -gt 0 ]
-	then
-		maxGeoPos=$((
-			cntGeo + (timeRem * cntGeoR) + (timeRem * (timeRem + 1) / 2) ))
-		[ $bestGeo -ge $maxGeoPos ] && return 0
-	fi
-
 	buildNext=
 
 	if [ $cntObsR -gt 0 ]
@@ -159,11 +152,8 @@ buildSomething()
 			"$oreR")
 				if [ $cntOre -ge $costOreR ]; then buildTime=1
 				else
-					buildTime=$((
-						1 + (
-							(cntOreR - 1 + costOreR - cntOre) / cntOreR
-						)
-					))
+					buildTime=$(( 1 + (
+						(cntOreR - 1 + costOreR - cntOre) / cntOreR) ))
 				fi
 			;;
 
@@ -217,8 +207,16 @@ buildSomething()
 		then
 			finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
 			[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
-
 		else
+			newTimeRem=$(( timeRem - buildTime ))
+
+			if [ $bestGeo -gt 0 ]
+			then
+				maxGeoPos=$((cntGeo + (timeRem * cntGeoR)
+					+ (newTimeRem * (newTimeRem + 1) / 2) ))
+				[ $bestGeo -ge $maxGeoPos ] && continue
+			fi
+
 			eval "stack${sp}_cntOre=$cntOre"
 			eval "stack${sp}_cntClay=$cntClay"
 			eval "stack${sp}_cntObs=$cntObs"
@@ -230,7 +228,7 @@ buildSomething()
 			eval "stack${sp}_timeRem=$timeRem"
 			sp=$(( sp + 1 ))
 
-			timeRem=$(( timeRem - buildTime ))
+			timeRem=$newTimeRem
 			cntOre=$(( cntOre + (cntOreR * buildTime) ))
 			cntClay=$(( cntClay + (cntClayR * buildTime) ))
 			cntObs=$(( cntObs + (cntObsR * buildTime) ))
