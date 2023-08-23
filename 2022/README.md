@@ -122,9 +122,9 @@ Running day 11, part 1
 Processing sample data took 0.06 seconds.
 Processing input data took 0.14 seconds.
 
-Running day 11, part 2
-Processing sample data took 4.43 seconds.
-Processing input data took 25.51 seconds.
+Running day 11, part 
+Processing sample data took 4.38 seconds.
+Processing input data took 22.05 seconds.
 
 
 Running day 12, part 1
