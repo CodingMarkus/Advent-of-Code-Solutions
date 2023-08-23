@@ -56,10 +56,6 @@ maxOreR=0
 maxClayR=0
 maxObsR=0
 
-readonly oreR=1
-readonly clayR=2
-readonly obsR=3
-readonly geoR=4
 
 activateBlueprint()
 {
@@ -120,36 +116,29 @@ buildSomething()
 
 	if [ $cntObsR -gt 0 ]
 	then
-		buildNext=$geoR
+		buildNext=4
 	fi
 
 	if  [ $timeRem -ge 4 ] && [ $cntObsR -lt $maxObsR ] && [ $cntClayR -gt 0 ]
 	then
-		buildNext="$buildNext $obsR"
+		buildNext="$buildNext 3"
 	fi
 
 	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ]
 	then
-		buildNext="$buildNext $clayR"
+		buildNext="$buildNext 2"
 	fi
 
 	if [ $timeRem -ge 4 ] && [ $cntOreR -lt $maxOreR ]
 	then
-		buildNext="$buildNext $oreR"
-	fi
-
-	if [ -z "$buildNext" ]
-	then
-		finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
-		[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
-		return 0
+		buildNext="$buildNext 1"
 	fi
 
 	for build in $buildNext
 	do
 		buildTime=0
 		case $build in
-			"$oreR")
+			1)
 				if [ $cntOre -ge $costOreR ]; then buildTime=1
 				else
 					buildTime=$(( 1 + (
@@ -157,7 +146,7 @@ buildSomething()
 				fi
 			;;
 
-			"$clayR")
+			2)
 				if [ $cntOre -ge $costClayR ]; then buildTime=1
 				else
 					buildTime=$(( 1 + (
@@ -165,7 +154,7 @@ buildSomething()
 				fi
 			;;
 
-			"$obsR")
+			3)
 				if [ $cntOre -ge $costObsR_ore ]; then bt1=1
 				else
 					bt1=$(( 1 + (
@@ -183,7 +172,7 @@ buildSomething()
 					else buildTime=$bt2; fi
 			;;
 
-			"$geoR")
+			4)
 				if [ $cntOre -ge $costGeoR_ore ]; then bt1=1
 				else
 					bt1=$(( 1 + (
@@ -207,10 +196,11 @@ buildSomething()
 		then
 			finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
 			[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+
 		else
 			newTimeRem=$(( timeRem - buildTime ))
 
-			if [ $bestGeo -gt 0 ]
+			if [ $bestGeo != 0 ]
 			then
 				maxGeoPos=$((cntGeo + (timeRem * cntGeoR)
 					+ (newTimeRem * (newTimeRem + 1) / 2) ))
@@ -235,23 +225,23 @@ buildSomething()
 			cntGeo=$(( cntGeo + (cntGeoR * buildTime) ))
 
 			case $build in
-				"$oreR")
+				1)
 					cntOreR=$(( cntOreR + 1 ))
 					cntOre=$(( cntOre - costOreR ))
 				;;
 
-				"$clayR")
+				2)
 					cntClayR=$(( cntClayR + 1 ))
 					cntOre=$(( cntOre - costClayR ))
 				;;
 
-				"$obsR")
+				3)
 					cntObsR=$(( cntObsR + 1 ))
 					cntOre=$(( cntOre - costObsR_ore ))
 					cntClay=$(( cntClay - costObsR_clay ))
 				;;
 
-				"$geoR")
+				4)
 					cntGeoR=$(( cntGeoR + 1 ))
 					cntOre=$(( cntOre - costGeoR_ore ))
 					cntObs=$(( cntObs - costGeoR_obs ))
