@@ -41,14 +41,14 @@ do
 	eval "y=\$dy_$idx"
 	eval "z=\$dz_$idx"
 
-	check $(( x - 1 )) $y $z
-	check $(( x + 1 )) $y $z
+	check $(( x - 1 )) "$y" "$z"
+	check $(( x + 1 )) "$y" "$z"
 
-	check $x $(( y - 1 )) $z
-	check $x $(( y + 1 )) $z
+	check "$x" $(( y - 1 )) "$z"
+	check "$x" $(( y + 1 )) "$z"
 
-	check $x $y $(( z - 1 ))
-	check $x $y $(( z + 1 ))
+	check "$x" "$y" $(( z - 1 ))
+	check "$x" "$y" $(( z + 1 ))
 
 	idx=$(( idx + 1 ))
 done

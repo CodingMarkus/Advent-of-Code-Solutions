@@ -101,8 +101,8 @@ checkUp()
 {
 	newY=$(( $2 + 1 ))
 	[ $newY -gt $yMax ] && return $false
-	haveVisited $1 $newY "$3" && return $false
-	hasDrop  $1 $newY "$3" && { area=$(( area + 1 )); return $false; }
+	haveVisited "$1" $newY "$3" && return $false
+	hasDrop "$1" $newY "$3" && { area=$(( area + 1 )); return $false; }
 	return $true
 }
 
@@ -111,8 +111,8 @@ checkDown()
 {
 	newY=$(( $2 - 1 ))
 	[ $newY -lt $yMin ] && return $false
-	haveVisited $1 $newY "$3" && return $false
-	hasDrop  $1 $newY "$3" && { area=$(( area + 1 )); return $false; }
+	haveVisited "$1" $newY "$3" && return $false
+	hasDrop "$1" $newY "$3" && { area=$(( area + 1 )); return $false; }
 	return $true
 }
 
@@ -121,8 +121,8 @@ checkForward()
 {
 	newZ=$(( $3 + 1 ))
 	[ $newZ -gt $zMax ] && return $false
-	haveVisited $1 $2 $newZ && return $false
-	hasDrop  $1 $2 $newZ && { area=$(( area + 1 )); return $false; }
+	haveVisited "$1" "$2" $newZ && return $false
+	hasDrop "$1" "$2" $newZ && { area=$(( area + 1 )); return $false; }
 	return $true
 }
 
@@ -131,8 +131,8 @@ checkBackward()
 {
 	newZ=$(( $3 - 1 ))
 	[ $newZ -lt $zMin ] && return $false
-	haveVisited $1 $2 $newZ && return $false
-	hasDrop  $1 $2 $newZ && { area=$(( area + 1 )); return $false; }
+	haveVisited "$1" "$2" $newZ && return $false
+	hasDrop "$1" "$2" $newZ && { area=$(( area + 1 )); return $false; }
 	return $true
 }
 
