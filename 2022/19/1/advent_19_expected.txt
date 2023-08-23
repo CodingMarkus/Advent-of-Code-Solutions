@@ -1,0 +1,2 @@
+Sum of quality levels: 33
+Sum of quality levels:
