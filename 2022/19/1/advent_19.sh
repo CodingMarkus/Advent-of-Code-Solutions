@@ -111,59 +111,23 @@ reset()
 }
 
 
-sp=0
-
-push()
-{
-	eval "stack${sp}_cntOre=$cntOre"
-	eval "stack${sp}_cntClay=$cntClay"
-	eval "stack${sp}_cntObs=$cntObs"
-	eval "stack${sp}_cntGeo=$cntGeo"
-
-	eval "stack${sp}_cntOreR=$cntOreR"
-	eval "stack${sp}_cntClayR=$cntClayR"
-	eval "stack${sp}_cntObsR=$cntObsR"
-	eval "stack${sp}_cntGeoR=$cntGeoR"
-
-	eval "stack${sp}_timeRem=$timeRem"
-
-	sp=$(( sp + 1 ))
-}
-
-
-pop()
-{
-	[ "$sp" -gt 0 ] || { echo "Pop error!" >&2; exit 1; }
-	sp=$(( sp - 1 ))
-
-	eval "cntOre=\$stack${sp}_cntOre"
-	eval "cntClay=\$stack${sp}_cntClay"
-	eval "cntObs=\$stack${sp}_cntObs"
-	eval "cntGeo=\$stack${sp}_cntGeo"
-
-	eval "cntOreR=\$stack${sp}_cntOreR"
-	eval "cntClayR=\$stack${sp}_cntClayR"
-	eval "cntObsR=\$stack${sp}_cntObsR"
-	eval "cntGeoR=\$stack${sp}_cntGeoR"
-
-	eval "timeRem=\$stack${sp}_timeRem"
-}
-
-
 # Brute Force
 
+sp=0
 buildSomething()
 {
-	buildNext=
-
-	if [ $cntOreR -lt $maxOreR ]
+	if [ $bestGeo -gt 0 ]
 	then
-		buildNext=$oreR
+		maxGeoPos=$((
+			cntGeo + (timeRem * cntGeoR) + (timeRem * (timeRem + 1) / 2) ))
+		[ $bestGeo -ge $maxGeoPos ] && return 0
 	fi
 
-	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ]
+	buildNext=
+
+	if [ $cntObsR -gt 0 ]
 	then
-		buildNext="$buildNext $clayR"
+		buildNext=$geoR
 	fi
 
 	if  [ $timeRem -ge 4 ] && [ $cntObsR -lt $maxObsR ] && [ $cntClayR -gt 0 ]
@@ -171,9 +135,21 @@ buildSomething()
 		buildNext="$buildNext $obsR"
 	fi
 
-	if [ $cntObsR -gt 0 ] && [ $timeRem -ge 2 ]
+	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ]
 	then
-		buildNext="$buildNext $geoR"
+		buildNext="$buildNext $clayR"
+	fi
+
+	if [ $timeRem -ge 4 ] && [ $cntOreR -lt $maxOreR ]
+	then
+		buildNext="$buildNext $oreR"
+	fi
+
+	if [ -z "$buildNext" ]
+	then
+		finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
+		[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+		return 0
 	fi
 
 	for build in $buildNext
@@ -181,9 +157,7 @@ buildSomething()
 		buildTime=0
 		case $build in
 			"$oreR")
-				if [ $cntOre -ge $costOreR ]
-				then
-					buildTime=1
+				if [ $cntOre -ge $costOreR ]; then buildTime=1
 				else
 					buildTime=$((
 						1 + (
@@ -194,66 +168,48 @@ buildSomething()
 			;;
 
 			"$clayR")
-				if [ $cntOre -ge $costClayR ]
-				then
-					buildTime=1
+				if [ $cntOre -ge $costClayR ]; then buildTime=1
 				else
-					buildTime=$((
-						1 + (
-							(cntOreR - 1 + costClayR - cntOre) / cntOreR
-						)
-					))
+					buildTime=$(( 1 + (
+						(cntOreR - 1 + costClayR - cntOre) / cntOreR) ))
 				fi
 			;;
 
 			"$obsR")
-				if [ $cntOre -ge $costObsR_ore ]
-				then
-					bt1=1
+				if [ $cntOre -ge $costObsR_ore ]; then bt1=1
 				else
-					bt1=$((
-						1 + (
-							(cntOreR - 1 + costObsR_ore - cntOre) / cntOreR
-						)
+					bt1=$(( 1 + (
+						(cntOreR - 1 + costObsR_ore - cntOre) / cntOreR) ))
+				fi
+
+				if [ $cntClay -ge $costObsR_clay ]; then bt2=1
+				else
+					bt2=$(( 1 + (
+						(cntClayR - 1 + costObsR_clay - cntClay) / cntClayR)
 					))
 				fi
 
-				if [ $cntClay -ge $costObsR_clay ]
-				then
-					bt2=1
-				else
-					bt2=$((
-						1 + (
-							(cntClayR - 1 + costObsR_clay - cntClay) / cntClayR
-						)
-					))
-				fi
-				buildTime=$(( bt1 > bt2 ? bt1 : bt2 ))
+				if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
+					else buildTime=$bt2; fi
 			;;
 
 			"$geoR")
-				if [ $cntOre -ge $costGeoR_ore ]
-				then
-					bt1=1
+				if [ $cntOre -ge $costGeoR_ore ]; then bt1=1
 				else
-					bt1=$((
-						1 + (
-							(cntOreR - 1 + costGeoR_ore - cntOre) / cntOreR
-						)
-					))
+					bt1=$(( 1 + (
+						(cntOreR - 1 + costGeoR_ore - cntOre) / cntOreR) ))
 				fi
 
 				if [ $cntObs -ge $costGeoR_obs ]
 				then
 					bt2=1
 				else
-					bt2=$((
-						1 + (
-							(cntObsR - 1 + costGeoR_obs - cntObs) / cntObsR
-						)
-					))
+					bt2=$(( 1 + (
+						(cntObsR - 1 + costGeoR_obs - cntObs) / cntObsR ) ))
 				fi
-				buildTime=$(( bt1 > bt2 ? bt1 : bt2 ))
+
+				if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
+					else buildTime=$bt2; fi
 			;;
 		esac
 
@@ -263,7 +219,16 @@ buildSomething()
 			[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
 
 		else
-			push
+			eval "stack${sp}_cntOre=$cntOre"
+			eval "stack${sp}_cntClay=$cntClay"
+			eval "stack${sp}_cntObs=$cntObs"
+			eval "stack${sp}_cntGeo=$cntGeo"
+			eval "stack${sp}_cntOreR=$cntOreR"
+			eval "stack${sp}_cntClayR=$cntClayR"
+			eval "stack${sp}_cntObsR=$cntObsR"
+			eval "stack${sp}_cntGeoR=$cntGeoR"
+			eval "stack${sp}_timeRem=$timeRem"
+			sp=$(( sp + 1 ))
 
 			timeRem=$(( timeRem - buildTime ))
 			cntOre=$(( cntOre + (cntOreR * buildTime) ))
@@ -295,9 +260,24 @@ buildSomething()
 				;;
 			esac
 
-			buildSomething
+			if [ $timeRem -lt 2 ]
+			then
+				finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
+				[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+			else
+				buildSomething
+			fi
 
-			pop
+			sp=$(( sp - 1 ))
+			eval "cntOre=\$stack${sp}_cntOre"
+			eval "cntClay=\$stack${sp}_cntClay"
+			eval "cntObs=\$stack${sp}_cntObs"
+			eval "cntGeo=\$stack${sp}_cntGeo"
+			eval "cntOreR=\$stack${sp}_cntOreR"
+			eval "cntClayR=\$stack${sp}_cntClayR"
+			eval "cntObsR=\$stack${sp}_cntObsR"
+			eval "cntGeoR=\$stack${sp}_cntGeoR"
+			eval "timeRem=\$stack${sp}_timeRem"
 		fi
 	done
 	return 0
