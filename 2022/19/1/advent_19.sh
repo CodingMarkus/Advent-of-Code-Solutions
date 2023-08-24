@@ -56,7 +56,6 @@ maxOreR=0
 maxClayR=0
 maxObsR=0
 
-
 activateBlueprint()
 {
 	bp=$1
@@ -124,7 +123,8 @@ buildSomething()
 		buildNext="$buildNext 3"
 	fi
 
-	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ]
+	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ] &&
+		[ $cntObsR -lt $maxObsR ]
 	then
 		buildNext="$buildNext 2"
 	fi
@@ -202,10 +202,12 @@ buildSomething()
 
 			if [ $bestGeo != 0 ]
 			then
+				# Very coarse estimation!
 				maxGeoPos=$((cntGeo + (timeRem * cntGeoR)
 					+ (newTimeRem * (newTimeRem + 1) / 2) ))
 				[ $bestGeo -ge $maxGeoPos ] && continue
 			fi
+
 
 			eval "stack${sp}_cntOre=$cntOre"
 			eval "stack${sp}_cntClay=$cntClay"
@@ -248,13 +250,7 @@ buildSomething()
 				;;
 			esac
 
-			if [ $timeRem -lt 2 ]
-			then
-				finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
-				[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
-			else
-				buildSomething
-			fi
+			buildSomething
 
 			sp=$(( sp - 1 ))
 			eval "cntOre=\$stack${sp}_cntOre"
@@ -268,6 +264,7 @@ buildSomething()
 			eval "timeRem=\$stack${sp}_timeRem"
 		fi
 	done
+
 	return 0
 }
 
