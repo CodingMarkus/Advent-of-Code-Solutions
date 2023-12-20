@@ -41,8 +41,6 @@ done
 
 # Setup global state
 
-readonly totalTime=24
-
 blueprint=0
 
 costOreR=0
@@ -76,194 +74,173 @@ activateBlueprint()
 }
 
 
-cntOre=0
-cntClay=0
-cntObs=0
-cntGeo=0
-
-cntOreR=0
-cntClayR=0
-cntObsR=0
-cntGeoR=0
-
 bestGeo=0
-timeRem=$totalTime
+buildTime=0
 
-reset()
+# Backtracking
+
+# $1 cntGeo
+# $2 cntGeoR
+# $3 timeRem
+# $4 newTimRem
+stopEarly()
 {
-	cntOre=0
-	cntClay=0
-	cntObs=0
-	cntGeo=0
-
-	cntOreR=1
-	cntClayR=0
-	cntObsR=0
-	cntGeoR=0
-
-	bestGeo=0
-	timeRem=$totalTime
+	[ $bestGeo = 0 ] && return 1
+	# Very coarse estimation!
+	maxGeo=$(( $1 + ($2 * $3) + ($4 * ($4 + 1) / 2) ))
+	[ $bestGeo -ge $maxGeo ] && return 0
+	return 1
 }
 
 
-# Brute Force
-
-sp=0
+# $1 cntOre
+# $2 cntClay
+# $3 cntObs
+# $4 cntGeo
+# $5 cntOreR
+# $6 cntClayR
+# $7 cntObsR
+# $8 cntGeoR
+# $9 timeRem
 buildSomething()
 {
-	buildNext=
-
-	if [ $cntObsR -gt 0 ]
+	if [ "$7" -gt 0 ]
 	then
-		buildNext=4
-	fi
-
-	if  [ $timeRem -ge 4 ] && [ $cntObsR -lt $maxObsR ] && [ $cntClayR -gt 0 ]
-	then
-		buildNext="$buildNext 3"
-	fi
-
-	if [ $timeRem -ge 6 ] && [ $cntClayR -lt $maxClayR ] &&
-		[ $cntObsR -lt $maxObsR ]
-	then
-		buildNext="$buildNext 2"
-	fi
-
-	if [ $timeRem -ge 4 ] && [ $cntOreR -lt $maxOreR ]
-	then
-		buildNext="$buildNext 1"
-	fi
-
-	for build in $buildNext
-	do
-		buildTime=0
-		case $build in
-			1)
-				if [ $cntOre -ge $costOreR ]; then buildTime=1
-				else
-					buildTime=$(( 1 + (
-						(cntOreR - 1 + costOreR - cntOre) / cntOreR) ))
-				fi
-			;;
-
-			2)
-				if [ $cntOre -ge $costClayR ]; then buildTime=1
-				else
-					buildTime=$(( 1 + (
-						(cntOreR - 1 + costClayR - cntOre) / cntOreR) ))
-				fi
-			;;
-
-			3)
-				if [ $cntOre -ge $costObsR_ore ]; then bt1=1
-				else
-					bt1=$(( 1 + (
-						(cntOreR - 1 + costObsR_ore - cntOre) / cntOreR) ))
-				fi
-
-				if [ $cntClay -ge $costObsR_clay ]; then bt2=1
-				else
-					bt2=$(( 1 + (
-						(cntClayR - 1 + costObsR_clay - cntClay) / cntClayR)
-					))
-				fi
-
-				if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
-					else buildTime=$bt2; fi
-			;;
-
-			4)
-				if [ $cntOre -ge $costGeoR_ore ]; then bt1=1
-				else
-					bt1=$(( 1 + (
-						(cntOreR - 1 + costGeoR_ore - cntOre) / cntOreR) ))
-				fi
-
-				if [ $cntObs -ge $costGeoR_obs ]
-				then
-					bt2=1
-				else
-					bt2=$(( 1 + (
-						(cntObsR - 1 + costGeoR_obs - cntObs) / cntObsR ) ))
-				fi
-
-				if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
-					else buildTime=$bt2; fi
-			;;
-		esac
-
-		if [ $buildTime -ge $timeRem ]
-		then
-			finalGeo=$(( cntGeo + (cntGeoR * timeRem) ))
-			[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
-
+		if [ "$1" -ge $costGeoR_ore ]; then bt1=1
 		else
-			newTimeRem=$(( timeRem - buildTime ))
+			bt1=$(( 1 + (
+				($5 - 1 + costGeoR_ore - $1) / $5) ))
+		fi
 
-			if [ $bestGeo != 0 ]
+		if [ "$3" -ge $costGeoR_obs ]; then bt2=1
+		else
+			bt2=$(( 1 + (
+				($7 - 1 + costGeoR_obs - $3) / $7 ) ))
+		fi
+
+		if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
+			else buildTime=$bt2; fi
+
+		if [ $buildTime -ge "$9" ]
+		then
+			finalGeo=$(( $4 + ($8 * $9) ))
+			[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+		else
+			newTimeRem=$(( $9 - buildTime ))
+
+			if [ $buildTime -eq 1 ]
 			then
-				# Very coarse estimation!
-				maxGeoPos=$((cntGeo + (timeRem * cntGeoR)
-					+ (newTimeRem * (newTimeRem + 1) / 2) ))
-				[ $bestGeo -ge $maxGeoPos ] && continue
+				stopEarly "$4" "$8" "$9" $newTimeRem && return 0
+				buildSomething \
+					$(( $1 + $5 - costGeoR_ore )) \
+					$(( $2 + $6  )) \
+					$(( $3 + $7 - costGeoR_obs )) \
+					$(( $4 + $8 )) \
+					"$5" "$6" "$7" $(( $8 + 1 )) $newTimeRem
+				# If we can build geo robot in one turn,
+				# there is no better option!
+				return 0
+
+			else
+				stopEarly "$4" "$8" "$9" $newTimeRem || \
+					buildSomething \
+						$(( $1 + ($5 * buildTime) - costGeoR_ore )) \
+						$(( $2 + ($6 * buildTime) )) \
+						$(( $3 + ($7 * buildTime) - costGeoR_obs )) \
+						$(( $4 + ($8 * buildTime) )) \
+						"$5" "$6" "$7" $(( $8 + 1 )) $newTimeRem
+			fi
+		fi
+	fi
+
+	if  [ "$9" -ge 4 ]
+	then
+
+		if  [ "$7" -lt $maxObsR ] && [ "$6" -gt 0 ]
+		then
+			if [  "$1" -ge $costObsR_ore ]; then bt1=1
+			else
+				bt1=$(( 1 + (
+					($5 - 1 + costObsR_ore - $1) / $5) ))
 			fi
 
+			if [ "$2" -ge $costObsR_clay ]; then bt2=1
+			else
+				bt2=$(( 1 + (
+					($6 - 1 + costObsR_clay - $2) / $6)
+				))
+			fi
 
-			eval "stack${sp}_cntOre=$cntOre"
-			eval "stack${sp}_cntClay=$cntClay"
-			eval "stack${sp}_cntObs=$cntObs"
-			eval "stack${sp}_cntGeo=$cntGeo"
-			eval "stack${sp}_cntOreR=$cntOreR"
-			eval "stack${sp}_cntClayR=$cntClayR"
-			eval "stack${sp}_cntObsR=$cntObsR"
-			eval "stack${sp}_cntGeoR=$cntGeoR"
-			eval "stack${sp}_timeRem=$timeRem"
-			sp=$(( sp + 1 ))
+			if [ $bt1 -gt $bt2 ]; then buildTime=$bt1
+				else buildTime=$bt2; fi
 
-			timeRem=$newTimeRem
-			cntOre=$(( cntOre + (cntOreR * buildTime) ))
-			cntClay=$(( cntClay + (cntClayR * buildTime) ))
-			cntObs=$(( cntObs + (cntObsR * buildTime) ))
-			cntGeo=$(( cntGeo + (cntGeoR * buildTime) ))
-
-			case $build in
-				1)
-					cntOreR=$(( cntOreR + 1 ))
-					cntOre=$(( cntOre - costOreR ))
-				;;
-
-				2)
-					cntClayR=$(( cntClayR + 1 ))
-					cntOre=$(( cntOre - costClayR ))
-				;;
-
-				3)
-					cntObsR=$(( cntObsR + 1 ))
-					cntOre=$(( cntOre - costObsR_ore ))
-					cntClay=$(( cntClay - costObsR_clay ))
-				;;
-
-				4)
-					cntGeoR=$(( cntGeoR + 1 ))
-					cntOre=$(( cntOre - costGeoR_ore ))
-					cntObs=$(( cntObs - costGeoR_obs ))
-				;;
-			esac
-
-			buildSomething
-
-			sp=$(( sp - 1 ))
-			eval "cntOre=\$stack${sp}_cntOre"
-			eval "cntClay=\$stack${sp}_cntClay"
-			eval "cntObs=\$stack${sp}_cntObs"
-			eval "cntGeo=\$stack${sp}_cntGeo"
-			eval "cntOreR=\$stack${sp}_cntOreR"
-			eval "cntClayR=\$stack${sp}_cntClayR"
-			eval "cntObsR=\$stack${sp}_cntObsR"
-			eval "cntGeoR=\$stack${sp}_cntGeoR"
-			eval "timeRem=\$stack${sp}_timeRem"
+			if [ $buildTime -ge "$9" ]
+			then
+				finalGeo=$(( $4 + ($8 * $9) ))
+				[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+			else
+				newTimeRem=$(( $9 - buildTime ))
+				stopEarly "$4" "$8" "$9" $newTimeRem || \
+					buildSomething \
+						$(( $1 + ($5 * buildTime) - costObsR_ore )) \
+						$(( $2 + ($6 * buildTime) - costObsR_clay)) \
+						$(( $3 + ($7 * buildTime) )) \
+						$(( $4 + ($8 * buildTime) )) \
+						"$5" "$6" $(( $7 + 1 )) "$8" $newTimeRem
+			fi
 		fi
-	done
+
+
+		if [ "$9" -ge 6 ] && [ "$6" -lt $maxClayR ] && [ "$7" -lt $maxObsR ]
+		then
+			if [ "$1" -ge $costClayR ]; then buildTime=1
+			else
+				buildTime=$(( 1 + (
+					($5 - 1 + costClayR - $1) / $5) ))
+			fi
+
+			if [ $buildTime -ge "$9" ]
+			then
+				finalGeo=$(( $4 + ($8 * $9) ))
+				[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+			else
+				newTimeRem=$(( $9 - buildTime ))
+				stopEarly "$4" "$8" "$9" $newTimeRem || \
+					buildSomething \
+						$(( $1 + ($5 * buildTime) - costClayR )) \
+						$(( $2 + ($6 * buildTime) )) \
+						$(( $3 + ($7 * buildTime) )) \
+						$(( $4 + ($8 * buildTime) )) \
+						"$5" $(( $6 + 1 )) "$7" "$8" $newTimeRem
+			fi
+		fi
+
+
+		if [ "$5" -lt $maxOreR ]
+		then
+			if [ "$1" -ge $costOreR ]; then buildTime=1
+			else
+				buildTime=$(( 1 + (
+					($5 - 1 + costOreR - $1) / $5) ))
+			fi
+
+			if [ $buildTime -ge "$9" ]
+			then
+				finalGeo=$(( $4 + ($8 * $9) ))
+				[ $bestGeo -lt $finalGeo ] && bestGeo=$finalGeo
+			else
+				newTimeRem=$(( $9 - buildTime ))
+				stopEarly "$4" "$8" "$9" $newTimeRem || \
+					buildSomething \
+						$(( $1 + ($5 * buildTime) - costOreR )) \
+						$(( $2 + ($6 * buildTime) )) \
+						$(( $3 + ($7 * buildTime) )) \
+						$(( $4 + ($8 * buildTime) )) \
+						$(( $5 + 1 )) "$6" "$7" "$8" $newTimeRem
+			fi
+		fi
+
+	fi
 
 	return 0
 }
@@ -271,12 +248,11 @@ buildSomething()
 
 qualitySum=0
 
-
 for blueprint in $allBlueprints
 do
+	bestGeo=0
 	activateBlueprint "$blueprint"
-	reset
-	buildSomething
+	buildSomething 0 0 0 0 1 0 0 0 24
 
 	qualitySum=$(( qualitySum + (bestGeo * blueprint) ))
 done
